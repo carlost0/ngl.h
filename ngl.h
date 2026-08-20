@@ -244,7 +244,8 @@ ngl_error_t ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color) {
     if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
 
     /* Set the whole screen to the specified Chars and Colors. */
-    for (u32 i = 0; i < screen->h * screen->w; ++i) {
+    u32 i;
+    for (i = 0; i < screen->h * screen->w; ++i) {
         screen->next.colors[i] = color;
         screen->next.chars[i] = c;
     }
