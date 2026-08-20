@@ -274,8 +274,9 @@ ngl_error_t ngl_print_screen(ngl_screen_t *screen) {
 
     pos += snprintf(buf+pos, cap-pos, "\x1b[H");
 
-    for (u32 y = 0; y < screen->h; ++y) {
-        for (u32 x = 0; x < screen->w; ++x) {
+    u32 x, y;
+    for (y = 0; y < screen->h; ++y) {
+        for (x = 0; x < screen->w; ++x) {
             /* current index, character and color */
             u32 i = ngl_idx(x, y, screen->w);
             char cchar          = screen->current.chars[i];
@@ -317,7 +318,8 @@ ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t co
     if (!c) cchar = '-';
 
     /* Draw top and bottom lines at the same Time */
-    for (u32 x = 0; x < w; ++x) {
+    u32 x;
+    for (x = 0; x < w; ++x) {
         u32 i = ngl_idx(x, 0, w);
         u32 j = ngl_idx(x, h-1, w);
 
@@ -330,7 +332,8 @@ ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t co
     if (!c) cchar = '|';
 
     /* Draw right and left lines at the same Time */
-    for (u32 y = 1; y < h; ++y) {
+    u32 y;
+    for (y = 1; y < h; ++y) {
         u32 i = ngl_idx(0, y, w);
         u32 j = ngl_idx(w-1, y, w);
 
@@ -368,10 +371,11 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
     /* Bounds check */
     if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
 
-    for (u32 cy = y; cy < y + h; ++cy) {
+    u32 cx, cy;
+    for (cy = y; cy < y + h; ++cy) {
         u32 i = ngl_idx(x, cy, screen->w);
         memset(&screen->next.chars[i], c, w);
-        for (u32 cx = 0; cx < w; ++cx) screen->next.colors[i+cx] = color;
+        for (cx = 0; cx < w; ++cx) screen->next.colors[i+cx] = color;
     }
 
     return ERR_SUCCESS;
@@ -453,14 +457,19 @@ ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
 
 void _ngl_disable_canonical_input(struct termios *oldt) {
     struct termios newt;
-    tcgetattr(STDIN_FILENO, oldt);      // get current terminal settings
+
+    /* Get the current terminal Settings. */
+    tcgetattr(STDIN_FILENO, oldt);
     newt = *oldt;
-    newt.c_lflag &= ~(ICANON | ECHO);    // disable canonical mode & echo
+
+    /* Disable canonical mode and echo .*/
+    newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 }
 
 void _ngl_enable_canonical_input(struct termios *oldt) {
-    tcsetattr(STDIN_FILENO, TCSANOW, oldt);  // restore old setting
+    /* Restore old Settings. */
+    tcsetattr(STDIN_FILENO, TCSANOW, oldt);
 }
 
 void *_ngl_get_keyboard_input(void *arg) {
