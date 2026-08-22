@@ -50,7 +50,7 @@
  *
  *     init_screen(&screen);
  *     char input = 0;
- *     init_input(input_ctx, input);
+ *     init_input(&input_ctx);
  *
  *     u32 rect_w = 10;
  *     u32 rect_h = 6;
@@ -59,7 +59,7 @@
  *    
  *     clear_screen();
  *     while (input != 'q') {
- *         get_input(input_ctx, input);
+ *         input = get_input(&input_ctx);
  *         clear_bg(&screen, '#', (color_t){0,0,0});
  *         draw_rect(&screen, rect_x, rect_y, rect_w, rect_h, '#', (color_t){0,255,0});
  *         draw_screen_borders(&screen, 0, (color_t){255, 255, 255});
@@ -68,8 +68,8 @@
  *     }
  *     clear_screen();
  *    
- *     end_input(input_ctx);
- *     free_screen(&screen);
+ *     destroy_input(&input_ctx);
+ *     destroy_screen(&screen);
  * }
  *
 */
@@ -157,6 +157,7 @@ ngl_error_t ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color);
 
 ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color); 
 ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
+ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
 
 
 #ifdef NGL_IMPLEMENTATION
@@ -367,7 +368,7 @@ ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t co
 }
 
 ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color) {
-    if (!screen) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
 
     /* Bounds check */
     if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
@@ -377,6 +378,25 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
         u32 i = ngl_idx(x, cy, screen->w);
         memset(&screen->next.chars[i], c, w);
         for (cx = 0; cx < w; ++cx) screen->next.colors[i+cx] = color;
+    }
+
+    return ERR_SUCCESS;
+}
+
+ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color) {
+    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+
+    if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
+    if (w*h*sizeof(char) != strlen(sprite)) return ERR_INVALID_SIZE;
+
+    u32 cx, cy;
+    for (cy = y; cy < y + h; ++cy) {
+        for (cx = x; cx < x + w; ++cx) {
+            u32 buf_i = ngl_idx(cx, cy, screen->w);
+            u32 sprite_i = ngl_idx(cx-x, cy-y, w);
+            screen->next.chars[buf_i] = sprite[sprite_i];
+            screen->next.colors[buf_i] = color;
+        }
     }
 
     return ERR_SUCCESS;
@@ -491,6 +511,253 @@ void *_ngl_get_keyboard_input(void *arg) {
 #endif /* NGL_INPUT*/
 #endif /* _NGL_INPUT_GUARD */
 
+#ifdef NGL_FONTS
+
+static const char *ngl_default_glyphs = {
+    /*  a */
+    "00000"
+    "00000"
+    "01110"
+    "10010"
+    "11101"
+     /* b */
+    "10000"
+    "10000"
+    "11100"
+    "10100"
+    "11100"
+     /* c */
+    "00000"
+    "00000"
+    "11110"
+    "10000"
+    "11110"
+     /* d */
+    "00100"
+    "00100"
+    "11100"
+    "10100"
+    "11100"
+     /* e */
+    "00000"
+    "00000"
+    "11100"
+    "11000"
+    "11100"
+     /* f */
+    "01000"
+    "10000"
+    "11000"
+    "10000"
+    "10000"
+     /* g */
+    "00000"
+    "00000"
+    "11000"
+    "01000"
+    "11000"
+     /* h */
+    "10000"
+    "10000"
+    "11100"
+    "10100"
+    "10100"
+     /* i */
+    "00000"
+    "10000"
+    "00000"
+    "10000"
+    "10000"
+     /* j */
+    "00000"
+    "01000"
+    "00000"
+    "01000"
+    "11000"
+     /* k */
+    "10000"
+    "10000"
+    "10100"
+    "11000"
+    "10100"
+     /* l */
+    "10000"
+    "10000"
+    "10000"
+    "10000"
+    "11000"
+     /* m */
+    "00000"
+    "00000"
+    "01010"
+    "10101"
+    "10101"
+     /* n */
+    "00000"
+    "00000"
+    "11000"
+    "10100"
+    "10100"
+     /* o */
+    "00000"
+    "00000"
+    "11100"
+    "10100"
+    "11100"
+     /* p */
+    "00000"
+    "00000"
+    "11000"
+    "11000"
+    "10000"
+     /* q */
+    "00000"
+    "00000"
+    "11000"
+    "11000"
+    "01000"
+     /* r */
+    "00000"
+    "00000"
+    "11100"
+    "10000"
+    "10000"
+     /* s */
+    "00000"
+    "00000"
+    "01100"
+    "01000"
+    "11000"
+     /* t */
+    "00000"
+    "01000"
+    "11100"
+    "01000"
+    "01100"
+     /* u */
+    "00000"
+    "00000"
+    "10100"
+    "10100"
+    "11100"
+     /* v */
+    "00000"
+    "00000"
+    "10100"
+    "10100"
+    "01000"
+     /* w */
+    "00000"
+    "00000"
+    "10101"
+    "10101"
+    "01010"
+     /* x */
+    "00000"
+    "00000"
+    "10100"
+    "01000"
+    "10100"
+     /* y */
+    "00000"
+    "00000"
+    "10100"
+    "01000"
+    "10000"
+     /* z */
+    "00000"
+    "00000"
+    "11100"
+    "01000"
+    "11100"
+};
+
+#define NGL_DEFAULT_GLYPH_W (5)
+#define NGL_DEFAULT_GLYPH_H (5)
+#define NGL_DEFAULT_GLYPH_N (26)
+#define NGL_DEFAULT_GLYPH_VPAD (1)
+#define NGL_DEFAULT_GLYPH_HPAD (1)
+#define NGL_DEFAULT_GLYPH_SCALE (1)
+
+typedef struct {
+    u32 w, h, n;
+    u8  hpad, vpad;
+    f32 scale;
+    const char *glyphs;
+} ngl_font_t;
+
+ngl_error_t ngl_load_font(ngl_font_t *font, const char *glyphs);
+ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char glyph, char c, ngl_color_t color);
+ngl_error_t ngl_draw_text(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char *str, char c, ngl_color_t color);
+
+#ifdef NGL_FONTS_IMPLEMENTATION
+ngl_error_t ngl_load_font(ngl_font_t *font, const char *glyphs) {
+    if (!font->w) font->w = NGL_DEFAULT_GLYPH_W;
+    if (!font->h) font->h = NGL_DEFAULT_GLYPH_H;
+    if (!font->h) font->n = NGL_DEFAULT_GLYPH_N;
+    if (!font->hpad) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
+    if (!font->vpad) font->vpad = NGL_DEFAULT_GLYPH_HPAD;
+
+    u32 n = font->w * font->h * font->n;
+
+    font->glyphs = glyphs;
+
+    return ERR_SUCCESS;   
+}
+
+ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char glyph, char c, ngl_color_t color) {
+    if (!screen ||
+        !screen->next.chars ||
+        !screen->next.colors ||
+        !font.glyphs) {
+        return ERR_INVALID_PTR;
+    }
+
+    if (x > screen->w || y > screen->h ||
+        font.w > screen->w - x ||
+        font.h > screen->h - y) {
+        return ERR_INVALID_SIZE;
+    }
+
+    if (glyph < 'a' || glyph > 'z') {
+        return ERR_INVALID_SIZE;
+    }
+
+    u32 glyph_index = (u32)(glyph - 'a');
+    u32 glyph_start = glyph_index * font.w * font.h;
+
+    for (u32 cy = 0; cy < font.h; ++cy) {
+        for (u32 cx = 0; cx < font.w; ++cx) {
+            u32 screen_i = ngl_idx(x + cx, y + cy, screen->w);
+            u32 glyph_i  = glyph_start + ngl_idx(cx, cy, font.w);
+
+            if (font.glyphs[glyph_i] == '1') {
+                screen->next.chars[screen_i] = c;
+                screen->next.colors[screen_i] = color;
+            }
+        }
+    }
+
+    return ERR_SUCCESS;
+}
+
+ngl_error_t ngl_draw_text(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char *str, char c, ngl_color_t color) {
+    if (!screen || !screen->next.chars || !screen->next.colors || !font.glyphs) return ERR_INVALID_PTR;
+    if (!str) return ERR_INVALID_PTR;
+
+    ngl_error_t err = 0;
+    u32 cx = x, cy = y;
+    while (*str != '\0') {
+        err = ngl_draw_glyph(screen, cx, cy, font, *str, c, color);
+        cx += font.w + font.hpad;
+        str++;
+    }
+    return err;
+}
+
+#endif /* NGL_FONTS_IMPLEMENTATION */
+#endif /* NGL_FONTS */
+
 #ifndef _NGL_PREFIX_GUARD
 #define _NGL_PREFIX_GUARD
 #ifndef NGL_UNSTRIP_PREFIX
@@ -510,17 +777,24 @@ void *_ngl_get_keyboard_input(void *arg) {
 
 #define draw_screen_borders ngl_draw_screen_borders
 #define draw_rect           ngl_draw_rect
+#define draw_sprite         ngl_draw_sprite
 
-typedef ngl_error_t  error_t;
-typedef ngl_screen_t screen_t;
-typedef ngl_color_t  color_t;
+typedef ngl_error_t         error_t;
+typedef ngl_screen_t        screen_t;
+typedef ngl_color_t         color_t;
 
 #ifdef NGL_INPUT
-#define init_input    ngl_init_input
-#define get_input     ngl_get_input
-#define destroy_input ngl_destroy_input
-typedef ngl_input_ctx_t input_ctx_t;
+#define init_input          ngl_init_input
+#define get_input           ngl_get_input
+#define destroy_input       ngl_destroy_input
+typedef ngl_input_ctx_t     input_ctx_t;
 #endif /* NGL_INPUT */
+
+#ifdef NGL_FONTS
+#define load_font           ngl_load_font
+#define draw_glyph          ngl_draw_glyph
+#define draw_text           ngl_draw_text
+#endif /* NGL_FONTS */
 
 #endif /* NGL_UNSTRIP_PREFIX */
 #endif /* _NGL_PREFIX_GUARD */
