@@ -513,168 +513,123 @@ void *_ngl_get_keyboard_input(void *arg) {
 
 #ifdef NGL_FONTS
 
-static const char *ngl_default_glyphs = {
-    /*  a */
-    "00000"
-    "00000"
-    "01110"
-    "10010"
-    "11101"
-     /* b */
-    "10000"
-    "10000"
-    "11100"
-    "10100"
-    "11100"
-     /* c */
-    "00000"
-    "00000"
-    "11110"
-    "10000"
-    "11110"
-     /* d */
-    "00100"
-    "00100"
-    "11100"
-    "10100"
-    "11100"
-     /* e */
-    "00000"
-    "00000"
-    "11100"
-    "11000"
-    "11100"
-     /* f */
-    "01000"
-    "10000"
-    "11000"
-    "10000"
-    "10000"
-     /* g */
-    "00000"
-    "00000"
-    "11000"
-    "01000"
-    "11000"
-     /* h */
-    "10000"
-    "10000"
-    "11100"
-    "10100"
-    "10100"
-     /* i */
-    "00000"
-    "10000"
-    "00000"
-    "10000"
-    "10000"
-     /* j */
-    "00000"
-    "01000"
-    "00000"
-    "01000"
-    "11000"
-     /* k */
-    "10000"
-    "10000"
-    "10100"
-    "11000"
-    "10100"
-     /* l */
-    "10000"
-    "10000"
-    "10000"
-    "10000"
-    "11000"
-     /* m */
-    "00000"
-    "00000"
-    "01010"
-    "10101"
-    "10101"
-     /* n */
-    "00000"
-    "00000"
-    "11000"
-    "10100"
-    "10100"
-     /* o */
-    "00000"
-    "00000"
-    "11100"
-    "10100"
-    "11100"
-     /* p */
-    "00000"
-    "00000"
-    "11000"
-    "11000"
-    "10000"
-     /* q */
-    "00000"
-    "00000"
-    "11000"
-    "11000"
-    "01000"
-     /* r */
-    "00000"
-    "00000"
-    "11100"
-    "10000"
-    "10000"
-     /* s */
-    "00000"
-    "00000"
-    "01100"
-    "01000"
-    "11000"
-     /* t */
-    "00000"
-    "01000"
-    "11100"
-    "01000"
-    "01100"
-     /* u */
-    "00000"
-    "00000"
-    "10100"
-    "10100"
-    "11100"
-     /* v */
-    "00000"
-    "00000"
-    "10100"
-    "10100"
-    "01000"
-     /* w */
-    "00000"
-    "00000"
-    "10101"
-    "10101"
-    "01010"
-     /* x */
-    "00000"
-    "00000"
-    "10100"
-    "01000"
-    "10100"
-     /* y */
-    "00000"
-    "00000"
-    "10100"
-    "01000"
-    "10000"
-     /* z */
-    "00000"
-    "00000"
-    "11100"
-    "01000"
-    "11100"
+#ifndef NGL_GLYPH
+#define NGL_GLYPH(a, b, c, d, e) \
+    ((u32)(a)        |       \
+    ((u32)(b) << 5)  |       \
+    ((u32)(c) << 10) |       \
+    ((u32)(d) << 15) |       \
+    ((u32)(e) << 20))
+#endif /* NGL_GLYPH */
+
+
+/* TODO: Add Docs for Font creation. */ 
+static const u32 NGL_DEFAULT_GLYPHS[] = {
+    /* ! */ NGL_GLYPH(0b00001,0b00001,0b00001,0b00000,0b00001),
+    /* " */ NGL_GLYPH(0b00101,0b00101,0b00000,0b00000,0b00000),
+    /* # */ NGL_GLYPH(0b01010,0b11111,0b01010,0b11111,0b01010),
+    /* $ */ NGL_GLYPH(0b01110,0b00101,0b01110,0b10100,0b01110),
+    /* % */ NGL_GLYPH(0b10001,0b01000,0b00100,0b00010,0b10001),
+    /* & */ NGL_GLYPH(0b00110,0b00101,0b10110,0b01001,0b10110),
+    /* ' */ NGL_GLYPH(0b00001,0b00001,0b00000,0b00000,0b00000),
+    /* ( */ NGL_GLYPH(0b00010,0b00001,0b00001,0b00001,0b00010),
+    /* ) */ NGL_GLYPH(0b00001,0b00010,0b00010,0b00010,0b00001),
+    /* * */ NGL_GLYPH(0b00100,0b01110,0b00100,0b00000,0b00000),
+    /* + */ NGL_GLYPH(0b00000,0b00100,0b01110,0b00100,0b00000),
+    /* , */ NGL_GLYPH(0b00000,0b00000,0b00000,0b00000,0b00011),
+    /* - */ NGL_GLYPH(0b00000,0b00000,0b01110,0b00000,0b00000),
+    /* . */ NGL_GLYPH(0b00000,0b00000,0b00000,0b00000,0b00001),
+    /* / */ NGL_GLYPH(0b10000,0b01000,0b00100,0b00010,0b00001),
+
+    /* 0 */ NGL_GLYPH(0b00111,0b00101,0b00101,0b00101,0b00111),
+    /* 1 */ NGL_GLYPH(0b00100,0b00110,0b00100,0b00100,0b00100),
+    /* 2 */ NGL_GLYPH(0b00111,0b00100,0b00111,0b00001,0b00111),
+    /* 3 */ NGL_GLYPH(0b00111,0b00100,0b00110,0b00100,0b00111),
+    /* 4 */ NGL_GLYPH(0b00101,0b00101,0b00111,0b00100,0b00100),
+    /* 5 */ NGL_GLYPH(0b00111,0b00001,0b00111,0b00100,0b00111),
+    /* 6 */ NGL_GLYPH(0b00111,0b00001,0b00111,0b00101,0b00111),
+    /* 7 */ NGL_GLYPH(0b00111,0b00101,0b00100,0b00100,0b00100),
+    /* 8 */ NGL_GLYPH(0b00111,0b00101,0b00111,0b00101,0b00111),
+    /* 9 */ NGL_GLYPH(0b00111,0b00101,0b00111,0b00100,0b00111),
+
+    /* : */ NGL_GLYPH(0b00000,0b00000,0b00001,0b00000,0b00001),
+    /* ; */ NGL_GLYPH(0b00000,0b00000,0b00010,0b00000,0b00011),
+    /* < */ NGL_GLYPH(0b00000,0b01100,0b00010,0b01100,0b00000),
+    /* = */ NGL_GLYPH(0b00000,0b01110,0b00000,0b01110,0b00000),
+    /* > */ NGL_GLYPH(0b00000,0b00110,0b01000,0b00110,0b00000),
+    /* ? */ NGL_GLYPH(0b01110,0b01000,0b01100,0b00000,0b00100),
+    /* @ */ NGL_GLYPH(0b11111,0b10001,0b11101,0b00001,0b11111),
+
+    /* A */ NGL_GLYPH(0b01110,0b10001,0b10001,0b11111,0b10001),
+    /* B */ NGL_GLYPH(0b01111,0b10001,0b01111,0b10001,0b01111),
+    /* C */ NGL_GLYPH(0b11111,0b00001,0b00001,0b00001,0b11111),
+    /* D */ NGL_GLYPH(0b01111,0b10001,0b10001,0b10001,0b01111),
+    /* E */ NGL_GLYPH(0b11111,0b00001,0b01111,0b00001,0b11111),
+    /* F */ NGL_GLYPH(0b11111,0b00001,0b01111,0b00001,0b00001),
+    /* G */ NGL_GLYPH(0b11111,0b00001,0b11101,0b10001,0b11111),
+    /* H */ NGL_GLYPH(0b10001,0b10001,0b11111,0b10001,0b10001),
+    /* I */ NGL_GLYPH(0b00111,0b00010,0b00010,0b00010,0b00111),
+    /* J */ NGL_GLYPH(0b11111,0b10000,0b10000,0b10000,0b01111),
+    /* K */ NGL_GLYPH(0b10001,0b01001,0b00111,0b01001,0b10001),
+    /* L */ NGL_GLYPH(0b00001,0b00001,0b00001,0b00001,0b11111),
+    /* M */ NGL_GLYPH(0b01010,0b10101,0b10101,0b10101,0b10001),
+    /* N */ NGL_GLYPH(0b10001,0b10011,0b10101,0b11001,0b10001),
+    /* O */ NGL_GLYPH(0b11111,0b10001,0b10001,0b10001,0b11111),
+    /* P */ NGL_GLYPH(0b11111,0b10001,0b11111,0b00001,0b00001),
+    /* Q */ NGL_GLYPH(0b11111,0b10001,0b10001,0b01001,0b10111),
+    /* R */ NGL_GLYPH(0b11111,0b10001,0b11111,0b01001,0b10001),
+    /* S */ NGL_GLYPH(0b11111,0b00001,0b11111,0b10000,0b11111),
+    /* T */ NGL_GLYPH(0b11111,0b00100,0b00100,0b00100,0b00100),
+    /* U */ NGL_GLYPH(0b10001,0b10001,0b10001,0b10001,0b11111),
+    /* V */ NGL_GLYPH(0b10001,0b10001,0b10001,0b01010,0b00100),
+    /* W */ NGL_GLYPH(0b10001,0b10001,0b10101,0b10101,0b01010),
+    /* X */ NGL_GLYPH(0b10001,0b01010,0b00100,0b01010,0b10001),
+    /* Y */ NGL_GLYPH(0b10001,0b01010,0b00100,0b00100,0b00100),
+    /* Z */ NGL_GLYPH(0b11111,0b01000,0b00100,0b00010,0b11111),
+
+    /* [ */ NGL_GLYPH(0b00011,0b00001,0b00001,0b00001,0b00011),
+    /* \ */ NGL_GLYPH(0b00011,0b00010,0b00010,0b00010,0b00011),
+    /* ] */ NGL_GLYPH(0b00001,0b00010,0b00100,0b01000,0b10000),
+    /* ^ */ NGL_GLYPH(0b00100,0b01010,0b00000,0b00000,0b00000),
+    /* _ */ NGL_GLYPH(0b00000,0b00000,0b00000,0b00000,0b11111),
+    /* ` */ NGL_GLYPH(0b00010,0b00100,0b00000,0b00000,0b00000),
+
+    /* a */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00101,0b01111),
+    /* b */ NGL_GLYPH(0b00001,0b00001,0b00111,0b00101,0b00111),
+    /* c */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00001,0b00111),
+    /* d */ NGL_GLYPH(0b00100,0b00100,0b00111,0b00101,0b00111),
+    /* e */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00011,0b00111),
+    /* f */ NGL_GLYPH(0b00011,0b00001,0b00011,0b00001,0b00001),
+    /* g */ NGL_GLYPH(0b00000,0b00000,0b00011,0b00010,0b00011),
+    /* h */ NGL_GLYPH(0b00001,0b00001,0b00111,0b00101,0b00101),
+    /* i */ NGL_GLYPH(0b00001,0b00000,0b00001,0b00001,0b00011),
+    /* j */ NGL_GLYPH(0b00010,0b00000,0b00010,0b00010,0b00011),
+    /* k */ NGL_GLYPH(0b00001,0b00001,0b00101,0b00011,0b00101),
+    /* l */ NGL_GLYPH(0b00001,0b00001,0b00001,0b00001,0b00011),
+    /* m */ NGL_GLYPH(0b00000,0b00000,0b01111,0b10101,0b10101),
+    /* n */ NGL_GLYPH(0b00000,0b00000,0b00011,0b00101,0b00101),
+    /* o */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00101,0b00111),
+    /* p */ NGL_GLYPH(0b00000,0b00000,0b00011,0b00011,0b00001),
+    /* q */ NGL_GLYPH(0b00000,0b00000,0b00011,0b00011,0b00010),
+    /* r */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00001,0b00001),
+    /* s */ NGL_GLYPH(0b00000,0b00000,0b00110,0b00010,0b00011),
+    /* t */ NGL_GLYPH(0b00000,0b00010,0b00111,0b00010,0b00110),
+    /* u */ NGL_GLYPH(0b00000,0b00000,0b00101,0b00101,0b00111),
+    /* v */ NGL_GLYPH(0b00000,0b00000,0b00101,0b00101,0b00010),
+    /* w */ NGL_GLYPH(0b00000,0b00000,0b10101,0b10101,0b01010),
+    /* x */ NGL_GLYPH(0b00000,0b00000,0b00101,0b00010,0b00101),
+    /* y */ NGL_GLYPH(0b00000,0b00000,0b00101,0b00010,0b00001),
+    /* z */ NGL_GLYPH(0b00000,0b00000,0b00111,0b00010,0b00111),
+
+    /* { */ NGL_GLYPH(0b00110,0b00010,0b00001,0b00010,0b00110),
+    /* | */ NGL_GLYPH(0b00100,0b00100,0b00100,0b00100,0b00100),
+    /* } */ NGL_GLYPH(0b00011,0b00010,0b00100,0b00010,0b00011),
+    /* ~ */ NGL_GLYPH(0b00000,0b00010,0b10101,0b01000,0b00000),
 };
 
 #define NGL_DEFAULT_GLYPH_W (5)
 #define NGL_DEFAULT_GLYPH_H (5)
-#define NGL_DEFAULT_GLYPH_N (26)
+#define NGL_DEFAULT_GLYPH_N (26 * 2 + 14)
 #define NGL_DEFAULT_GLYPH_VPAD (1)
 #define NGL_DEFAULT_GLYPH_HPAD (1)
 #define NGL_DEFAULT_GLYPH_SCALE (1)
@@ -683,76 +638,121 @@ typedef struct {
     u32 w, h, n;
     u8  hpad, vpad;
     f32 scale;
-    const char *glyphs;
+    const u32 *glyphs;
 } ngl_font_t;
 
-ngl_error_t ngl_load_font(ngl_font_t *font, const char *glyphs);
-ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char glyph, char c, ngl_color_t color);
-ngl_error_t ngl_draw_text(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char *str, char c, ngl_color_t color);
+ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs);
+
+ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph);
+ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str);
+ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
 
 #ifdef NGL_FONTS_IMPLEMENTATION
-ngl_error_t ngl_load_font(ngl_font_t *font, const char *glyphs) {
-    if (!font->w) font->w = NGL_DEFAULT_GLYPH_W;
-    if (!font->h) font->h = NGL_DEFAULT_GLYPH_H;
-    if (!font->h) font->n = NGL_DEFAULT_GLYPH_N;
-    if (!font->hpad) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
-    if (!font->vpad) font->vpad = NGL_DEFAULT_GLYPH_HPAD;
+ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
+    if (font->w <= 0) font->w = NGL_DEFAULT_GLYPH_W;
+    if (font->h <= 0) font->h = NGL_DEFAULT_GLYPH_H;
+    if (font->h <= 0) font->n = NGL_DEFAULT_GLYPH_N;
+    if (font->hpad <= 0) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
+    if (font->vpad <= 0) font->vpad = NGL_DEFAULT_GLYPH_HPAD;
 
-    u32 n = font->w * font->h * font->n;
+    if (glyphs == NULL) font->glyphs = NGL_DEFAULT_GLYPHS;
+    else                font->glyphs = glyphs;
 
-    font->glyphs = glyphs;
 
     return ERR_SUCCESS;   
 }
 
-ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char glyph, char c, ngl_color_t color) {
-    if (!screen ||
-        !screen->next.chars ||
-        !screen->next.colors ||
-        !font.glyphs) {
-        return ERR_INVALID_PTR;
-    }
+ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph) {
+    if (!screen || !screen->next.chars || !screen->next.colors || !font.glyphs) return ERR_INVALID_PTR;
+    if (x > screen->w || y > screen->h || font.w > screen->w - x || font.h > screen->h - y) return ERR_INVALID_SIZE;
 
-    if (x > screen->w || y > screen->h ||
-        font.w > screen->w - x ||
-        font.h > screen->h - y) {
+    /* All the alphanumeric Symbols in the ASCII Table. */
+    char startc = '!';
+    char endc = '~';
+
+    if (glyph < startc || glyph > endc) {
         return ERR_INVALID_SIZE;
     }
 
-    if (glyph < 'a' || glyph > 'z') {
-        return ERR_INVALID_SIZE;
-    }
+    u32 glyph_index = (u32)(glyph - startc);
 
-    u32 glyph_index = (u32)(glyph - 'a');
-    u32 glyph_start = glyph_index * font.w * font.h;
+    u32 bits = font.glyphs[glyph_index];
+    u32 gy, gx;
+    for (gy = 0; gy < font.h; ++gy) {
+        for (gx = 0; gx < font.w; ++gx) {
+            if ((bits >> (gy * font.w + gx)) & 1u) {
+                u32 screen_i = ngl_idx(x + gx, y + gy, screen->w);
 
-    for (u32 cy = 0; cy < font.h; ++cy) {
-        for (u32 cx = 0; cx < font.w; ++cx) {
-            u32 screen_i = ngl_idx(x + cx, y + cy, screen->w);
-            u32 glyph_i  = glyph_start + ngl_idx(cx, cy, font.w);
-
-            if (font.glyphs[glyph_i] == '1') {
                 screen->next.chars[screen_i] = c;
                 screen->next.colors[screen_i] = color;
             }
         }
     }
 
+    
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_draw_text(ngl_screen_t *screen, u32 x, u32 y, ngl_font_t font, char *str, char c, ngl_color_t color) {
+ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str) {
     if (!screen || !screen->next.chars || !screen->next.colors || !font.glyphs) return ERR_INVALID_PTR;
     if (!str) return ERR_INVALID_PTR;
 
     ngl_error_t err = 0;
     u32 cx = x, cy = y;
     while (*str != '\0') {
-        err = ngl_draw_glyph(screen, cx, cy, font, *str, c, color);
-        cx += font.w + font.hpad;
+        /* Basic ASCII escape Codes. */
+        if (*str == '\t')      cx += 4 * font.w + font.hpad;  /* Horizontal Tab. */
+        else if (*str == '\v') cy += 4 * font.h + font.vpad;  /* Vertical Tab.   */
+        else if (*str == '\r') cx = x;                        /* Cariage Return. */
+        else if (*str == '\a') printf("\a\n");                /* Terminal Bell.  */
+
+        else {
+            err = ngl_draw_glyph(screen, font,  cx, cy, c, color, *str);
+            cx += font.w + font.hpad;
+        }
+
+
+        /* Wrap around and Newline. */
+        if (cx + font.w >= screen->w || *str == '\n') {
+            cx = x;
+            cy += font.h + font.vpad;
+        } 
         str++;
     }
     return err;
+}
+
+#include <stdarg.h>
+ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    va_list tmp_args;
+    va_copy(tmp_args, args);
+
+    int length = vsnprintf(NULL, 0, format, tmp_args);
+    va_end(tmp_args);
+
+    if (length < 0) {
+        va_end(args);
+        return ERR_INVALID_SIZE;
+    }
+
+    char *buf = (char*)malloc(((size_t)length + 1) * sizeof(char));
+
+    if (!buf) {
+        va_end(args);
+        return ERR_FAILED_MALLOC;
+    }
+
+    vsnprintf(buf, (size_t)length + 1, format, args);
+
+    va_end(args);
+
+    ngl_draw_text(screen, font, x, y, c, color, buf);
+
+    free(buf);
+    return ERR_SUCCESS;
 }
 
 #endif /* NGL_FONTS_IMPLEMENTATION */
@@ -791,9 +791,10 @@ typedef ngl_input_ctx_t     input_ctx_t;
 #endif /* NGL_INPUT */
 
 #ifdef NGL_FONTS
-#define load_font           ngl_load_font
+#define load_glyphs         ngl_load_glyphs
 #define draw_glyph          ngl_draw_glyph
 #define draw_text           ngl_draw_text
+#define draw_text_fmt       ngl_draw_text_fmt
 #endif /* NGL_FONTS */
 
 #endif /* NGL_UNSTRIP_PREFIX */

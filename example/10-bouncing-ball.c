@@ -17,7 +17,7 @@ int main() {
 
     /* Specify the Width and Height of the Screen. */
     /* We use rows-1 because only rows would cause Scroling. */
-    screen_t screen = { cols, rows-1, };
+    screen_t screen = { cols, rows-1, {0}, {0}};
 
     /* The input_ctx_t type stores all the necesary Stuff to get User Input from STDIN on a seperate Thread without blocking Input. */
     input_ctx_t input_ctx = {0};

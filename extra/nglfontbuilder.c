@@ -19,6 +19,7 @@ int main() {
     printf("Press C or Mouse 3 to Clear the Screen as a C String.\n");
     while (!WindowShouldClose()) {
         BeginDrawing();
+
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
                 if (cells[y * w + x]) {
@@ -28,15 +29,18 @@ int main() {
                 }
             }       
         }       
-        for (int x = 0; x < w; ++x) {
-            DrawRectangle(x * RATIO_W, 0, line_thickness, h*RATIO_H, GRAY);
-        }
+
+        for (int x = 0; x < w; ++x)
+            DrawRectangle(x * RATIO_W, 0, line_thickness, h * RATIO_H, GRAY);
         for (int y = 0; y < h; ++y)
-            DrawRectangle(0, y*RATIO_H, w*RATIO_W, line_thickness, GRAY);
+            DrawRectangle(0, y * RATIO_H, w * RATIO_W, line_thickness, GRAY);
+
         EndDrawing();
 
         int mx = GetMouseX();
         int my = GetMouseY();
+
+        int mouse_i = (my/RATIO_H) * w + (mx/RATIO_W);
 
         if (IsMouseButtonDown(0)) {
             cells[((int)(my/RATIO_H)) * w + ((int)(mx/RATIO_W))] = 1;
@@ -47,14 +51,15 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_P)) {
+            printf("NGL_GLYPH(");
             for (int y = 0; y < h; ++y) {
-                printf("\"");
-                for (int x = 0; x < w; ++x) {
+                printf("0b");
+                for (int x = w-1; x >= 0; --x) {
                     printf("%d", cells[x + y * w]);
                 }
-                printf("\"\n");
+                if (y != h-1) printf(",");
             }
-            printf(" ----- \n");
+            printf("),\n");
         }
     }
 
