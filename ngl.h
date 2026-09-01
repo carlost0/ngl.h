@@ -126,7 +126,7 @@ struct ngl_color_s {
 /* These are two Heap allocated 1d arrays where we will store the "Pixels" to. */
 struct ngl_buf_s {
     struct ngl_color_s  *colors;
-    char            *chars;
+    char                *chars;
 };
 
 /* All the drawing will be done to the "next" Buffer this Struct. */
@@ -795,6 +795,9 @@ typedef ngl_input_ctx_t     input_ctx_t;
 #define draw_glyph          ngl_draw_glyph
 #define draw_text           ngl_draw_text
 #define draw_text_fmt       ngl_draw_text_fmt
+
+typedef ngl_font_t          font_t;
+
 #endif /* NGL_FONTS */
 
 #endif /* NGL_UNSTRIP_PREFIX */
