@@ -39,8 +39,7 @@
  * // cc -o test test.c
  * // The following Code will display a green Rectangle in the Console until you press 'q'
  *
- * #define NGL_INPUT
- * #define NGL_INPUT_IMPLEMENTATION
+ * #define NGL_NO_FONTS
  * #define NGL_IMPLEMENTATION
  * #include "ngl.h"
  *
@@ -109,6 +108,9 @@ enum ngl_error_e {
 
     ERR_FAILED_MALLOC,
     ERR_FAILED_FILE_OPEN,
+    ERR_FAILED_FILE_READ,
+    ERR_FAILED_FILE_CLOSE,
+    ERR_FAILED_POLL,
 
     ERR_FAILED_THREAD_CREATION,
     ERR_FAILED_MUTEX_CREATION,
@@ -403,115 +405,189 @@ ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, ch
 }
 
 #endif /* NGL_IMPLEMENTATION */
-
 #endif /* _NGL_H */
 
 #ifndef _NGL_INPUT_GUARD
 #define _NGL_INPUT_GUARD
 
-#ifdef NGL_INPUT
+#ifndef NGL_NO_INPUT
 
-#include <termios.h>
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <linux/input.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
-#include <pthread.h>
+#include <errno.h>
+#include <poll.h>
+#include <termios.h>
 
-typedef struct {
-    i32 input;
-    /* these vars shouldn't be edited by external functions */
-    pthread_t thread;
-    pthread_mutex_t mutex;
+enum ngl_key_state_e {
+    KEY_RELEASED = 0,
+    KEY_PRESSED  = 1,
+    KEY_REPEAT   = 2,
+};
+
+struct ngl_input_ctx_s {
+    u8             key_states[KEY_MAX + 1];
+    struct pollfd  pfd;
     struct termios oldt;
-    int running;
-} ngl_input_ctx_t;
+} ;
 
-ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx);
-i32 ngl_get_input(ngl_input_ctx_t *ctx);
-ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx);
-#ifdef NGL_INPUT_IMPLEMENTATION
+typedef struct ngl_input_ctx_s ngl_input_ctx_t;
+typedef enum   ngl_key_state_e ngl_key_state_t;
 
-void _ngl_disable_canonical_input(struct termios *oldt);
-void _ngl_enable_canonical_input(struct termios *oldt);
-void *_ngl_get_keyboard_input(void *arg);
+ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
+ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
 
-ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
-    if (!ctx) return ERR_INVALID_PTR; 
+ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t *ctx, u16 key);
+ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
 
-    ctx->input = 0;
-    ctx->running = 1;
+#ifdef  NGL_IMPLEMENTATION
 
-    if (pthread_mutex_init(&ctx->mutex, NULL) != 0)
-        return ERR_FAILED_MUTEX_CREATION;
+#ifndef ngl_is_key_down
+#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(&ctx, key)  > 0)
+#endif /* is_key_down */
 
-    _ngl_disable_canonical_input(&ctx->oldt);
+#ifndef ngl_is_key_pressed
+#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(&ctx, key) == 1)
+#endif /* is_key_pressed */
 
-    if (pthread_create(&ctx->thread, NULL, _ngl_get_keyboard_input, ctx) != 0) {
-        pthread_mutex_destroy(&ctx->mutex);
-        _ngl_enable_canonical_input(&ctx->oldt);
-        return ERR_FAILED_THREAD_CREATION;
+#ifdef  ngl_is_key_pressed_repeat
+#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(&ctx, key) == 2)
+#endif /* is_key_pressed_repeat */
+
+ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t *ctx, u16 key) {
+    if (key > KEY_MAX) return -1;
+
+    return ctx->key_states[key];
+}
+
+bool _test_bit(const u64 *bits, i32 bit) {
+    return bits[bit / (sizeof(u64) * 8)] &
+           (1UL << (bit % (sizeof(u64) * 8)));
+}
+
+bool _is_keyboard(i32 fd) {
+    unsigned long ev_bits[(EV_MAX + 1 +
+                            sizeof(unsigned long) * 8 - 1) /
+                           (sizeof(unsigned long) * 8)] = {0};
+
+    unsigned long key_bits[(KEY_MAX + 1 +
+                             sizeof(unsigned long) * 8 - 1) /
+                            (sizeof(unsigned long) * 8)] = {0};
+
+    if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0)
+        return false;
+
+    if (!_test_bit(ev_bits, EV_KEY))
+        return false;
+
+    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0)
+        return false;
+    return _test_bit(key_bits, KEY_A) &&
+       _test_bit(key_bits, KEY_Z) &&
+       _test_bit(key_bits, KEY_ENTER) &&
+       _test_bit(key_bits, KEY_SPACE);
+}
+
+i32 _find_keyboard(void) {
+    char path[64];
+    u32 i;
+    for (i = 0; i < 16; ++i) {
+        snprintf(path, sizeof(path), "/dev/input/event%d", i);
+
+        int fd = open(path, O_RDONLY | O_NONBLOCK);
+        if (fd < 0)
+            continue;
+
+        if (_is_keyboard(fd))
+            return fd;
+
+        close(fd);
     }
 
-    return ERR_SUCCESS;
+    return -1;
 }
 
-i32 ngl_get_input(ngl_input_ctx_t *ctx) {
-    pthread_mutex_lock(&ctx->mutex);
-    i32 input = ctx->input;
-    ctx->input = 0;
-    pthread_mutex_unlock(&ctx->mutex);
-    return input;
-}
+ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
+    int fd = _find_keyboard();
+    if (fd == -1) {
+        return ERR_FAILED_FILE_OPEN;
+    }
 
-ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
-    pthread_mutex_lock(&ctx->mutex);
-    ctx->running = 0;
+    ctx->pfd.fd = fd;
+    ctx->pfd.events = POLLIN;
 
-    pthread_mutex_unlock(&ctx->mutex);
-
-    if (pthread_join(ctx->thread, NULL)) return ERR_FAILED_THREAD_DESTRUCTION;
-    if (pthread_mutex_destroy(&ctx->mutex)) return ERR_FAILED_THREAD_DESTRUCTION;
-
-    fflush(stdout);
-    _ngl_enable_canonical_input(&ctx->oldt);
-    return ERR_SUCCESS;
-}
-
-
-void _ngl_disable_canonical_input(struct termios *oldt) {
     struct termios newt;
 
     /* Get the current terminal Settings. */
-    tcgetattr(STDIN_FILENO, oldt);
-    newt = *oldt;
+    tcgetattr(STDIN_FILENO, &ctx->oldt);
+    newt = ctx->oldt;
 
-    /* Disable canonical mode and echo .*/
-    newt.c_lflag &= ~(ICANON | ECHO);
+    /* Disable echo .*/
+    newt.c_lflag &= ~ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    return ERR_SUCCESS;
 }
 
-void _ngl_enable_canonical_input(struct termios *oldt) {
-    /* Restore old Settings. */
-    tcsetattr(STDIN_FILENO, TCSANOW, oldt);
+ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
+    if (!ctx) return ERR_INVALID_PTR;
+    if (close(ctx->pfd.fd) < 0) return ERR_FAILED_FILE_CLOSE;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &ctx->oldt);
+
+    return ERR_SUCCESS;
 }
 
-void *_ngl_get_keyboard_input(void *arg) {
-    ngl_input_ctx_t *ctx = arg;
-    while (ctx->running) {
-        char c;
-        size_t n = read(STDIN_FILENO, &c, 1);
-        if (n == 1) {
-            pthread_mutex_lock(&ctx->mutex);
-            ctx->input = c;
-            pthread_mutex_unlock(&ctx->mutex);
+ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
+    struct pollfd *fd = &ctx->pfd;
+
+    fd->revents = 0;
+    i32 status = poll(fd, 1, 0);
+
+    if (status < 0 && errno == EINTR) return ERR_FAILED_POLL;
+    
+    if (fd->revents & (POLLERR|POLLHUP|POLLNVAL)) {
+        return ERR_FAILED_POLL;
+    }
+
+    if (fd->revents & POLLIN) {
+        struct input_event events[KEY_MAX + 1];
+
+        ssize_t bytes = read(fd->fd, events, sizeof(events));
+
+        if (bytes == -1) {
+            return ERR_FAILED_FILE_READ;
+        }
+
+        if (bytes % sizeof(struct input_event) != 0) {
+            return ERR_FAILED_FILE_READ;
+        }
+
+        size_t count = bytes / sizeof(struct input_event);
+
+        u32 i;
+        for (i = 0; i < count; i++) {
+            struct input_event *ev = &events[i];
+
+            if (ev->type == EV_KEY) {
+                ctx->key_states[ev->code] = ev->value;
+            }
         }
     }
-    return NULL;
+    return ERR_SUCCESS;
 }
 
-#endif /* NGL_INPUT_IMPLEMENTATION */
-#endif /* NGL_INPUT*/
+
+#endif /* NGL_IMPLEMENTATION */
+#endif /* NGL_NO_INPUT*/
 #endif /* _NGL_INPUT_GUARD */
 
-#ifdef NGL_FONTS
+#ifndef _NGL_FONTS_GUARD
+#define _NGL_FONTS_GUARD
+#ifndef NGL_NO_FONTS
 
 #ifndef NGL_GLYPH
 #define NGL_GLYPH(a, b, c, d, e) \
@@ -647,7 +723,8 @@ ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, 
 ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str);
 ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
 
-#ifdef NGL_FONTS_IMPLEMENTATION
+#ifdef NGL_IMPLEMENTATION
+
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
     if (font->w <= 0) font->w = NGL_DEFAULT_GLYPH_W;
     if (font->h <= 0) font->h = NGL_DEFAULT_GLYPH_H;
@@ -755,50 +832,64 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
     return ERR_SUCCESS;
 }
 
-#endif /* NGL_FONTS_IMPLEMENTATION */
-#endif /* NGL_FONTS */
+#endif /* NGL_IMPLEMENTATION */
+#endif /* NGL_NO_FONTS */
+#endif /* _NGL_FONTS_GUARD */
 
 #ifndef _NGL_PREFIX_GUARD
 #define _NGL_PREFIX_GUARD
 #ifndef NGL_UNSTRIP_PREFIX
 
-#define idx                 ngl_idx
+#define idx                    ngl_idx
 
-#define delay               ngl_delay
-#define clear_screen        ngl_clear_screen
+#define delay                  ngl_delay
+#define clear_screen           ngl_clear_screen
 
-#define get_term_size       ngl_get_term_size
+#define get_term_size          ngl_get_term_size
 
-#define init_screen         ngl_init_screen
-#define destroy_screen      ngl_destroy_screen
+#define init_screen            ngl_init_screen
+#define destroy_screen         ngl_destroy_screen
 
-#define print_screen        ngl_print_screen
-#define clear_bg            ngl_clear_bg
+#define print_screen           ngl_print_screen
+#define clear_bg               ngl_clear_bg
 
-#define draw_screen_borders ngl_draw_screen_borders
-#define draw_rect           ngl_draw_rect
-#define draw_sprite         ngl_draw_sprite
+#define draw_screen_borders    ngl_draw_screen_borders
+#define draw_rect              ngl_draw_rect
+#define draw_sprite            ngl_draw_sprite
 
-typedef ngl_error_t         error_t;
-typedef ngl_screen_t        screen_t;
-typedef ngl_color_t         color_t;
+typedef ngl_error_t            error_t;
+typedef ngl_screen_t           screen_t;
+typedef ngl_color_t            color_t;
 
-#ifdef NGL_INPUT
-#define init_input          ngl_init_input
-#define get_input           ngl_get_input
-#define destroy_input       ngl_destroy_input
-typedef ngl_input_ctx_t     input_ctx_t;
-#endif /* NGL_INPUT */
+#ifndef NGL_NO_INPUT
 
-#ifdef NGL_FONTS
-#define load_glyphs         ngl_load_glyphs
-#define draw_glyph          ngl_draw_glyph
-#define draw_text           ngl_draw_text
-#define draw_text_fmt       ngl_draw_text_fmt
+#define is_key_down            ngl_is_key_down
+#define is_key_pressed         ngl_is_key_pressed
+#define is_key_pressed_repeat  ngl_is_key_pressed_repeat
 
-typedef ngl_font_t          font_t;
+typedef ngl_input_ctx_t        input_ctx_t;
+typedef ngl_key_state_t        key_state_t;
 
-#endif /* NGL_FONTS */
+#define get_key_state          ngl_get_key_state
+#define init_input             ngl_init_input
+#define get_keyboard_state     ngl_get_keyboard_state
+
+#define init_input             ngl_init_input
+#define get_input              ngl_get_input
+#define destroy_input          ngl_destroy_input
+
+#endif /* NGL_NO_INPUT */
+
+#ifndef NGL_NO_FONTS
+
+#define load_glyphs            ngl_load_glyphs
+#define draw_glyph             ngl_draw_glyph
+#define draw_text              ngl_draw_text
+#define draw_text_fmt          ngl_draw_text_fmt
+
+typedef ngl_font_t             font_t;
+
+#endif /* NGL_NO_FONTS */
 
 #endif /* NGL_UNSTRIP_PREFIX */
 #endif /* _NGL_PREFIX_GUARD */

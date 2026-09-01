@@ -1,6 +1,5 @@
 /* cc -o bouncing-ball 00-bouncing-ball.c  */
-#define NGL_INPUT
-#define NGL_INPUT_IMPLEMENTATION
+#define NGL_NO_FONTS
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 
@@ -21,14 +20,13 @@ int main() {
 
     /* The input_ctx_t type stores all the necesary Stuff to get User Input from STDIN on a seperate Thread without blocking Input. */
     input_ctx_t input_ctx = {0};
-    i32 input = 0;
 
     /* This Function allocates Heap memory for the Front and Back Buffers. */
     /* A Buffer consists of two 1d arrays, one for the Characters (4 Byte i32), and one for the Colors (3 * 1 Bytes u8 for the Red, Green and Blue channels). */
     err |= init_screen(&screen);
     if (err) return 1;
 
-    /* init_input creates a Mutex for the Input and starts a new Nhread where we will be reading from STDIN. */
+    /* This Function turns terminal Echo of, and opens the Keyboard's File Descriptor, for that the User must be in the 'input' group */
     err = init_input(&input_ctx);
     if (err) return 1;
 
@@ -41,8 +39,11 @@ int main() {
     /* clear_screen prints the ANSI Escape Codes to set the Cursor's Position to (0,0) and clears everything after it. */
     clear_screen();
 
-    while (input != 'q') {
-        input = get_input(&input_ctx);
+    int running = 1;
+    while (running) {
+        get_keyboard_state(&input_ctx);
+        if (is_key_pressed(input_ctx, KEY_Q)) running = 0;
+
 
         u32 nx = ball_x + vx;
         u32 ny = ball_y + vy;

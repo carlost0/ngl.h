@@ -1,8 +1,4 @@
 #define NGL_IMPLEMENTATION
-#define NGL_INPUT_IMPLEMENTATION
-#define NGL_INPUT
-#define NGL_FONTS
-#define NGL_FONTS_IMPLEMENTATION
 #include "../ngl.h"
 
 int main() {
@@ -19,9 +15,11 @@ int main() {
 
     clear_screen();
 
-    u32 input = 0;
-    while (input != 'q') {
-        input = get_input(&input_ctx);
+    int running = 1;
+    while (running) {
+        get_keyboard_state(&input_ctx);
+        if (is_key_down(input_ctx, KEY_Q)) running = 0;
+
         clear_bg(&screen, '#', (color_t){0,0,0});
         draw_text(&screen, font, 2, 2, 'l', (color_t){255,255,255}, "Hello, World!");
         draw_screen_borders(&screen, 0, (color_t){255,255,255});
