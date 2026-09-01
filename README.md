@@ -1,9 +1,6 @@
 > [!NOTE]
 > This is a continuation to [aschii](https://github.com/carlost0/aschii).
 
-> [!NOTE]
-> The GitHub description is wrong! ngl.h uses <stdint.h>, so it does not support ISO C90.
-
 # ngl.h
 Not a Graphics Library is a stb-style single Header Graphics Library for your Terminal written with ISO C99.
 
