@@ -29,12 +29,6 @@
  *  Prepends "ngl_" to all functions, this is a Workaround as we don't 
  *  have Namespaces in C
  *
- *  NGL_INPUT:
- *  Allow ngl to get Input via STDIN, view README.md for the usage
- *
- *  NGL_INPUT_IMPLEMENTATION:
- *  Like NGL_INPUT_IMPLEMENTATION but for input
- *
  * example:
  * // cc -o test test.c
  * // The following Code will display a green Rectangle in the Console until you press 'q'
@@ -147,6 +141,7 @@ typedef struct ngl_buf_s    ngl_buf_t;
 #define ngl_idx(x, y, w) ((y) * (w) + (x))
 
 void ngl_delay(u32 ms);
+u64  ngl_get_ms(void);
 void ngl_clear_screen(void);
 
 ngl_error_t ngl_get_term_size(u16 *rows, u16 *cols);
@@ -173,6 +168,11 @@ void ngl_delay(u32 ms) {
     select(0, NULL, NULL, NULL, &tv);
 }
 
+u64  ngl_get_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -396,8 +396,10 @@ ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, ch
         for (cx = x; cx < x + w; ++cx) {
             u32 buf_i = ngl_idx(cx, cy, screen->w);
             u32 sprite_i = ngl_idx(cx-x, cy-y, w);
-            screen->next.chars[buf_i] = sprite[sprite_i];
-            screen->next.colors[buf_i] = color;
+            if (sprite[sprite_i] != ' ') {
+                screen->next.chars[buf_i] = sprite[sprite_i];
+                screen->next.colors[buf_i] = color;
+            }
         }
     }
 
@@ -424,13 +426,15 @@ ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, ch
 #include <termios.h>
 
 enum ngl_key_state_e {
-    KEY_RELEASED = 0,
-    KEY_PRESSED  = 1,
-    KEY_REPEAT   = 2,
+    KSTATE_UP       = 0,
+    KSTATE_DOWN     = 1,
+    KSTATE_REPEAT   = 2,
+    KSTATE_RELEASED = 3,
 };
 
 struct ngl_input_ctx_s {
     u8             key_states[KEY_MAX + 1];
+    u8             old_key_states[KEY_MAX + 1];
     struct pollfd  pfd;
     struct termios oldt;
 } ;
@@ -441,27 +445,33 @@ typedef enum   ngl_key_state_e ngl_key_state_t;
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
 ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
 
-ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t *ctx, u16 key);
+ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key);
 ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
 
-#ifdef  NGL_IMPLEMENTATION
-
 #ifndef ngl_is_key_down
-#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(&ctx, key)  > 0)
+#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(ctx, key) > 0 && ngl_get_key_state(ctx, key) < 3)
 #endif /* is_key_down */
 
 #ifndef ngl_is_key_pressed
-#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(&ctx, key) == 1)
+#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(ctx, key) == KSTATE_PRESSED)
 #endif /* is_key_pressed */
 
 #ifdef  ngl_is_key_pressed_repeat
-#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(&ctx, key) == 2)
+#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(ctx, key) == KSTATE_REPEAT)
 #endif /* is_key_pressed_repeat */
 
-ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t *ctx, u16 key) {
+#ifndef ngl_is_key_released
+#define ngl_is_key_released(ctx, key)       (ngl_get_key_state(ctx, key) == KSTATE_RELEASED)
+#endif /* is_key_down */
+
+
+#ifdef  NGL_IMPLEMENTATION
+
+ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key) {
     if (key > KEY_MAX) return -1;
 
-    return ctx->key_states[key];
+    if (ctx.old_key_states[key] == 1 && ctx.key_states[key] == 0) return KSTATE_RELEASED;
+    return ctx.key_states[key];
 }
 
 bool _test_bit(const u64 *bits, i32 bit) {
@@ -520,6 +530,7 @@ ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
     ctx->pfd.fd = fd;
     ctx->pfd.events = POLLIN;
 
+    memset(&ctx->key_states, 0, sizeof(ctx->key_states) / sizeof(ctx->key_states[0]));
     struct termios newt;
 
     /* Get the current terminal Settings. */
@@ -552,6 +563,8 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
     if (fd->revents & (POLLERR|POLLHUP|POLLNVAL)) {
         return ERR_FAILED_POLL;
     }
+
+    memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states) / sizeof(u8));
 
     if (fd->revents & POLLIN) {
         struct input_event events[KEY_MAX + 1];
@@ -843,6 +856,7 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 #define idx                    ngl_idx
 
 #define delay                  ngl_delay
+#define get_ms                 ngl_get_ms
 #define clear_screen           ngl_clear_screen
 
 #define get_term_size          ngl_get_term_size
@@ -865,6 +879,7 @@ typedef ngl_color_t            color_t;
 
 #define is_key_down            ngl_is_key_down
 #define is_key_pressed         ngl_is_key_pressed
+#define is_key_released        ngl_is_key_released
 #define is_key_pressed_repeat  ngl_is_key_pressed_repeat
 
 typedef ngl_input_ctx_t        input_ctx_t;
@@ -875,7 +890,6 @@ typedef ngl_key_state_t        key_state_t;
 #define get_keyboard_state     ngl_get_keyboard_state
 
 #define init_input             ngl_init_input
-#define get_input              ngl_get_input
 #define destroy_input          ngl_destroy_input
 
 #endif /* NGL_NO_INPUT */
