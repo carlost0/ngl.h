@@ -5,7 +5,9 @@
 Not a Graphics Library is a stb-style single Header Graphics Library for your Terminal written with ISO C99.
 
 # Usage
-Download ngl.h into your Project's directory, and include ngl.h in your Program.
+Download ngl.h into your Project's directory: `wget https://raw.githubusercontent.com/carlost0/ngl.h/refs/heads/main/ngl.h`,
+then include ngl.h in your Program.
+
 See the example directory for a quick Guide on how to use ngl.h.
 
 The source code of ngl.h aims to be very understandable, and is extensively commented so even an English speaking Baby that knows C could understand it.
