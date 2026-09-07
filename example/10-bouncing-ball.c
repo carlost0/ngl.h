@@ -4,6 +4,7 @@
 #include "../ngl.h"
 
 static const u32 FPS = 60;
+
 int main() {
     error_t err = 0;
     u16 rows = 0;

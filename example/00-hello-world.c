@@ -1,3 +1,4 @@
+/* cc examples/00-hello-world.c -o hello */
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 
