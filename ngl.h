@@ -26,8 +26,14 @@
  * 
  * more Macros:
  *  NGL_UNSTRIP_PREFIX: 
- *  Prepends "ngl_" to all functions, this is a Workaround as we don't 
- *  have Namespaces in C
+ *   Prepends "ngl_" to all functions, this is a Workaround as we don't 
+ *   have Namespaces in C
+ *
+ *  NGL_NO_FONTS:
+ *   Disables font support.
+ *
+ *  NGL_NO_INPUT:
+ *   Disables input support.
  *
  * example:
  * // cc -o test test.c
