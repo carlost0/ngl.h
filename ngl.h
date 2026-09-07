@@ -44,11 +44,10 @@
  * #include "ngl.h"
  *
  * int main() {
- *     screen_t screen = {.w = 30, .h = 20};
+ *     screen_t screen = {30, 20};
  *     input_ctx_t input_ctx = {0};
  *
  *     init_screen(&screen);
- *     char input = 0;
  *     init_input(&input_ctx);
  *
  *     u32 rect_w = 10;
@@ -57,7 +56,9 @@
  *     u32 rect_y = 2;
  *    
  *     clear_screen();
- *     while (input != 'q') { input = get_input(&input_ctx);
+ *     int running = 1;
+ *     while (running) { 
+ *         if (is_key_down(input_ctx, KEY_Q)) runnning = 0;
  *         clear_bg(&screen, '#', (color_t){0,0,0});
  *         draw_rect(&screen, rect_x, rect_y, rect_w, rect_h, '#', (color_t){0,255,0});
  *         draw_screen_borders(&screen, 0, (color_t){255, 255, 255});
