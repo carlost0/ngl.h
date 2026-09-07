@@ -24,7 +24,7 @@
  * usage:
  *  Include ngl.h in your file and define the NGL_IMPLEMENTATION Macro in your main File.
  * 
- * more Macros:
+ * configuration Macros:
  *  NGL_UNSTRIP_PREFIX: 
  *   Prepends "ngl_" to all functions, this is a Workaround as we don't 
  *   have Namespaces in C
