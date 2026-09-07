@@ -3,6 +3,7 @@
 
 # ngl.h
 Not a Graphics Library is a stb-style single Header Graphics Library for your Terminal written with ISO C99.
+ngl.h only has ~900 lines of code, ~330 Semicolons and ~70 open Braces.
 
 # Usage
 Download ngl.h into your Project's directory: `wget https://raw.githubusercontent.com/carlost0/ngl.h/refs/heads/main/ngl.h`,

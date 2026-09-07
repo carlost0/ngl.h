@@ -47,24 +47,21 @@ int main(void) {
 
     size_t semicolons = 0;
     size_t braces = 0;
-    size_t parentheses = 0;
 
     for (size_t i = 0; i < len; ++i) {
         switch (buf[i]) {
             case ';': semicolons++;  break;
-            case '(': parentheses++; break;
             case '{': braces++;      break;
             default: break;
         }
     }
     free(buf);
 
-    size_t total = semicolons + braces + parentheses;
+    size_t total = semicolons + braces;
     printf("Semicolons         => %ld\n"
-           "Parentheses (open) => %ld\n"
            "Braces (open)      => %ld\n"
            "Total = %ld\n", 
-           semicolons, parentheses, braces, total
+           semicolons, braces, total
    );
     return 0;
 }
