@@ -622,7 +622,14 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
 
 
 
-/* TODO: Add Docs for Font creation. */ 
+/* 
+ * This font is made with nglfontbuilder.c, found in extra/.
+ * Since implementing ttf support would be overkill, we must make some limitations:
+ *  - The Glyphs must not be bigger than 5x5 pixels.
+ *  - The Glyphs must only be symbols found in the ASCII table starting from '!' until '~'.
+ *  - The Glyphs must be ordered the same way as they appear in the ASCII table.
+ */
+
 static const u32 NGL_DEFAULT_GLYPHS[] = {
     /* ! */ NGL_GLYPH(0b00001,0b00001,0b00001,0b00000,0b00001),
     /* " */ NGL_GLYPH(0b00101,0b00101,0b00000,0b00000,0b00000),
@@ -728,18 +735,16 @@ static const u32 NGL_DEFAULT_GLYPHS[] = {
 
 #define NGL_DEFAULT_GLYPH_W (5)
 #define NGL_DEFAULT_GLYPH_H (5)
-#define NGL_DEFAULT_GLYPH_N (26 * 2 + 14)
 #define NGL_DEFAULT_GLYPH_VPAD (1)
 #define NGL_DEFAULT_GLYPH_HPAD (1)
-#define NGL_DEFAULT_GLYPH_SCALE (1)
 
 typedef struct {
-    u32 w, h, n;
+    u32 w, h;
     u8  hpad, vpad;
-    f32 scale;
     const u32 *glyphs;
 } ngl_font_t;
 
+/* Load specified glyphs into font, if the second parameter is NULL, the default glyphs will be used. */
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs);
 
 ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph);
@@ -752,7 +757,6 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
     if (font->w <= 0) font->w = NGL_DEFAULT_GLYPH_W;
     if (font->h <= 0) font->h = NGL_DEFAULT_GLYPH_H;
-    if (font->h <= 0) font->n = NGL_DEFAULT_GLYPH_N;
     if (font->hpad <= 0) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
     if (font->vpad <= 0) font->vpad = NGL_DEFAULT_GLYPH_HPAD;
 
