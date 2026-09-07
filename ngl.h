@@ -51,8 +51,7 @@
  *     u32 rect_y = 2;
  *    
  *     clear_screen();
- *     while (input != 'q') {
- *         input = get_input(&input_ctx);
+ *     while (input != 'q') { input = get_input(&input_ctx);
  *         clear_bg(&screen, '#', (color_t){0,0,0});
  *         draw_rect(&screen, rect_x, rect_y, rect_w, rect_h, '#', (color_t){0,255,0});
  *         draw_screen_borders(&screen, 0, (color_t){255, 255, 255});
@@ -70,6 +69,7 @@
 #ifndef _NGL_H
 #define _NGL_H
 
+#define _POSIX_C_SOURCE 200809L
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -157,6 +157,7 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
 ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
 
 
+#endif /* _NGL_H */
 #ifdef NGL_IMPLEMENTATION
 
 #include <sys/select.h>
@@ -173,6 +174,7 @@ u64  ngl_get_ms(void) {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
+
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -370,10 +372,10 @@ ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t co
 }
 
 ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color) {
-    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
 
     /* Bounds check */
-    if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
+    if (x > screen->w || w > screen->w - x || y > screen->h || h > screen->h - y) return ERR_INVALID_SIZE;
 
     u32 cx, cy;
     for (cy = y; cy < y + h; ++cy) {
@@ -407,13 +409,12 @@ ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, ch
 }
 
 #endif /* NGL_IMPLEMENTATION */
-#endif /* _NGL_H */
-
-#ifndef _NGL_INPUT_GUARD
-#define _NGL_INPUT_GUARD
 
 #ifndef NGL_NO_INPUT
+#ifndef _NGL_INPUT_H
+#define _NGL_INPUT_H
 
+#undef _GNU_SOURCE
 #define _GNU_SOURCE
 #include <fcntl.h>
 #include <linux/input.h>
@@ -465,7 +466,9 @@ ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
 #endif /* is_key_down */
 
 
-#ifdef  NGL_IMPLEMENTATION
+#endif /* _NGL_INPUT_H */
+
+#ifdef NGL_IMPLEMENTATION
 
 ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key) {
     if (key > KEY_MAX) return -1;
@@ -596,11 +599,10 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
 
 #endif /* NGL_IMPLEMENTATION */
 #endif /* NGL_NO_INPUT*/
-#endif /* _NGL_INPUT_GUARD */
 
-#ifndef _NGL_FONTS_GUARD
-#define _NGL_FONTS_GUARD
 #ifndef NGL_NO_FONTS
+#ifndef _NGL_FONTS_H
+#define _NGL_FONTS_H
 
 #ifndef NGL_GLYPH
 #define NGL_GLYPH(a, b, c, d, e) \
@@ -610,6 +612,7 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
     ((u32)(d) << 15) |       \
     ((u32)(e) << 20))
 #endif /* NGL_GLYPH */
+
 
 
 /* TODO: Add Docs for Font creation. */ 
@@ -736,6 +739,7 @@ ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, 
 ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str);
 ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
 
+#endif /* _NGL_FONTS_H */
 #ifdef NGL_IMPLEMENTATION
 
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
@@ -847,10 +851,9 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 
 #endif /* NGL_IMPLEMENTATION */
 #endif /* NGL_NO_FONTS */
-#endif /* _NGL_FONTS_GUARD */
 
-#ifndef _NGL_PREFIX_GUARD
-#define _NGL_PREFIX_GUARD
+#ifndef _NGL_PREFIX
+#define _NGL_PREFIX
 #ifndef NGL_UNSTRIP_PREFIX
 
 #define idx                    ngl_idx
@@ -906,4 +909,4 @@ typedef ngl_font_t             font_t;
 #endif /* NGL_NO_FONTS */
 
 #endif /* NGL_UNSTRIP_PREFIX */
-#endif /* _NGL_PREFIX_GUARD */
+#endif /* _NGL_PREFIX*/
