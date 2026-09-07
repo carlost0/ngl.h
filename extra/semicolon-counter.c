@@ -1,4 +1,4 @@
-/* cc semicolon-counter.c -o sc-counter */
+/* cc semicolon-counter.c -o sc */
 #include <stdio.h>
 #include <stdlib.h>
 
