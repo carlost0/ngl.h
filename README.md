@@ -10,14 +10,13 @@ then include ngl.h in your Program.
 
 See the example directory for a quick Guide on how to use ngl.h.
 
-The source code of ngl.h aims to be very understandable, and is extensively commented so even an English speaking Baby that knows C could understand it.
+The source code of ngl.h aims to be very understandable, and extensively commented so even an English speaking Baby that knows C could understand it.
 
 # Example
 Here's a basic Program that with `ngl.h` as in examples/00-bouncing-ball.c
 
 ``` C 
-#define NGL_INPUT
-#define NGL_INPUT_IMPLEMENTATION
+#define NGL_NO_FONTS
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 

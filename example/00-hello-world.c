@@ -1,6 +1,8 @@
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 
+#include <stdlib.h>
+
 int main() {
     u16 w, h;
     get_term_size(&h, &w);
@@ -8,6 +10,8 @@ int main() {
     screen_t screen = {w, h-1, {0}, {0}};
     input_ctx_t input_ctx = {0};
     ngl_font_t font = {.hpad = 2};
+
+    const char *username = getenv("USER");
 
     load_glyphs(&font, NULL);
     init_screen(&screen);
@@ -21,7 +25,7 @@ int main() {
         if (is_key_down(input_ctx, KEY_Q)) running = 0;
 
         clear_bg(&screen, '#', (color_t){0,0,0});
-        draw_text(&screen, font, 2, 2, 'l', (color_t){255,255,255}, "Hello, World!");
+        draw_text_fmt(&screen, font, 2, 2, 'l', (color_t){255,255,255}, "Hello, %s!", username);
         draw_screen_borders(&screen, 0, (color_t){255,255,255});
         print_screen(&screen);
     }

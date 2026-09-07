@@ -42,7 +42,7 @@ int main() {
     int running = 1;
     while (running) {
         get_keyboard_state(&input_ctx);
-        if (is_key_pressed(input_ctx, KEY_Q)) running = 0;
+        if (is_key_down(input_ctx, KEY_Q)) running = 0;
 
 
         u32 nx = ball_x + vx;
