@@ -1,5 +1,6 @@
 /* cc examples/00-hello-world.c -o hello */
 #define NGL_IMPLEMENTATION
+#define NGL_NO_MATH
 #include "../ngl.h"
 
 #include <stdlib.h>

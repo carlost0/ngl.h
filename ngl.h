@@ -35,11 +35,15 @@
  *  NGL_NO_INPUT:
  *   Disables input support.
  *
+ *  NGL_NO_MATH:
+ *   Disables math support.
+ *
  * example:
  * // cc -o test test.c
  * // The following Code will display a green Rectangle in the Console until you press 'q'
  *
  * #define NGL_NO_FONTS
+ * #define NGL_NO_MATH
  * #define NGL_IMPLEMENTATION
  * #include "ngl.h"
  *
@@ -73,6 +77,8 @@
  *    
  *     destroy_input(&input_ctx);
  *     destroy_screen(&screen);
+ *
+ *     return 0;
  * }
  *
 */
@@ -867,6 +873,124 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 #endif /* NGL_IMPLEMENTATION */
 #endif /* NGL_NO_FONTS */
 
+#ifndef NGL_NO_MATH
+#ifndef _NGL_MATH
+
+#include <math.h>
+
+#ifndef PI
+#define PI 3.14159265358979323846f
+#endif /* PI */
+
+typedef struct {
+    f64 x, y;
+} ngl_vec2_t;
+
+/* Constructor */
+#ifndef ngl_vec2
+#define ngl_vec2(x, y) ((ngl_vec2_t){(f64)(x), (f64)(y)})
+#endif /* ngl_vec2 */
+
+#ifndef ngl_deg_to_rad
+#define ngl_deg_to_rad(theta) ((theta) * (PI / 180.0f))
+#endif /* ngl_deg_to_rad */
+
+ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b);
+ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b);
+ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b);
+ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b);
+ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec);
+
+ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 scalar);
+f64        ngl_vec2_len(ngl_vec2_t vec);
+
+f64 ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b);
+f64 ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b);
+ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec);
+ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec);
+ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec);
+/* Rotate Vector by angle in radians */
+ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle);
+
+#ifndef ngl_vec2_mag
+#define ngl_vec2_mag ngl_vec2_len
+#endif /* ngl_vec2_mag */
+
+#endif /* _NGL_MATH */
+
+#ifdef NGL_IMPLEMENTATION
+
+ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b) {
+    return ngl_vec2(a.x + b.x, a.y + b.y);
+}
+
+ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b) {
+    return ngl_vec2(a.x - b.x, a.y - b.y);
+}
+
+
+ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b) {
+    return ngl_vec2(a.x * b.x, a.y * b.y);
+}
+
+f64 ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+f64 ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b) {
+    return a.x * b.y - a.y * b.x;
+}
+
+ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b) {
+    return ngl_vec2(a.x / b.x, a.y / b.y);
+}
+
+ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec) {
+    return ngl_vec2(sqrtf(vec.x), sqrtf(vec.y));
+}
+
+ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 scalar) {
+    return ngl_vec2(vec.x * scalar, vec.y * scalar);
+}
+
+f64 ngl_vec2_len(ngl_vec2_t vec) {
+    return sqrtf(vec.x * vec.x + vec.y * vec.y);
+}
+
+ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec) {
+    f64 length = ngl_vec2_len(vec);
+
+    if (length == 0.0) {
+        return ngl_vec2(0.0, 0.0);
+    }
+
+    return ngl_vec2(vec.x / length, vec.y / length);
+}
+
+ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec) {
+    return ngl_vec2(-vec.y, vec.x);
+}
+
+ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec) {
+    return ngl_vec2(vec.y, -vec.x);
+}
+
+ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
+    f64 c = cosf(angle);
+    f64 s = sinf(angle);
+
+    ngl_vec2_t res = {0};
+
+    res.x = vec.x * c - vec.y * s;
+    res.y = vec.x * s + vec.y * c;
+
+    return res;
+}
+
+#endif /* NGL_IMPLEMENTATION */
+
+#endif /* NGL_NO_MATH */
+
 #ifndef _NGL_PREFIX
 #define _NGL_PREFIX
 #ifndef NGL_UNSTRIP_PREFIX
@@ -923,5 +1047,28 @@ typedef ngl_font_t             font_t;
 
 #endif /* NGL_NO_FONTS */
 
+#ifndef NGL_NO_MATH
+
+#define vec2_t         ngl_vec2_t
+#define vec2           ngl_vec2
+
+#define vec2_add       ngl_vec2_add
+#define vec2_sub       ngl_vec2_sub
+#define vec2_dot       ngl_vec2_dot
+#define vec2_cross     ngl_vec2_cross
+#define vec2_div       ngl_vec2_div
+#define vec2_sqrt      ngl_vec2_sqrt
+#define vec2_scale     ngl_vec2_scale
+#define vec2_len       ngl_vec2_len
+#define vec2_normalize ngl_vec2_normalize
+#define vec2_rot90cw   ngl_vec2_rot90cw
+#define vec2_rot90ccw  ngl_vec2_rot90ccw
+#define vec2_mag       ngl_vec2_mag
+#define vec2_mul       ngl_vec2_mul
+#define vec2_rot       ngl_vec2_rot
+
+#define deg_to_rad     ngl_deg_to_rad
+
+#endif /* NGL_NO_MATH */
 #endif /* NGL_UNSTRIP_PREFIX */
 #endif /* _NGL_PREFIX*/

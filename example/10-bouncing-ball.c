@@ -1,5 +1,6 @@
 /* cc -o bouncing-ball 00-bouncing-ball.c  */
 #define NGL_NO_FONTS
+#define NGL_NO_MATH
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 
