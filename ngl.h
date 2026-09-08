@@ -133,8 +133,8 @@ typedef struct {
 
 /* These are two Heap allocated 1d arrays where we will store the "Pixels" to. */
 typedef struct {
-    struct ngl_color_s  *colors;
-    char                *chars;
+    ngl_color_t *colors;
+    char        *chars;
 }ngl_buf_t ;
 
 /* All the drawing will be done to the "next" Buffer this Struct. */
