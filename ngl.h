@@ -95,7 +95,7 @@
 
 #include <time.h>
 
-/* more helpful types */
+/* More helpful types */
 typedef int8_t    i8;
 typedef int16_t  i16;
 typedef int32_t  i32;
@@ -111,7 +111,7 @@ typedef float    f32;
 
 /* Most ngl Functions return this Type. */
 /* ngl also gives you the Freedom to write Error Messages yourself. */
-enum ngl_error_e {
+typedef enum {
     ERR_SUCCESS,
 
     ERR_INVALID_SIZE,
@@ -127,32 +127,27 @@ enum ngl_error_e {
     ERR_FAILED_MUTEX_CREATION,
     ERR_FAILED_THREAD_DESTRUCTION,
     ERR_FAILED_MUTEX_DESTRUCTION,
-};
+} ngl_error_t;
 
 /* Basic RGB Color Struct. */
-struct ngl_color_s {
+typedef struct {
     u8 r;
     u8 g;
     u8 b;
-};
+} ngl_color_t;
 
 /* These are two Heap allocated 1d arrays where we will store the "Pixels" to. */
-struct ngl_buf_s {
+typedef struct {
     struct ngl_color_s  *colors;
     char                *chars;
-};
+}ngl_buf_t ;
 
 /* All the drawing will be done to the "next" Buffer this Struct. */
-struct ngl_screen_s {
+typedef struct {
     u32 w, h;
-    struct ngl_buf_s current;
-    struct ngl_buf_s next;
-};
-
-typedef enum   ngl_error_e  ngl_error_t;
-typedef struct ngl_color_s  ngl_color_t;
-typedef struct ngl_screen_s ngl_screen_t;
-typedef struct ngl_buf_s    ngl_buf_t;
+    ngl_buf_t current;
+    ngl_buf_t next;
+} ngl_screen_t;
 
 /* Convert a 2d Coordinate into a 1d Index. */
 #define ngl_idx(x, y, w) ((y) * (w) + (x))
