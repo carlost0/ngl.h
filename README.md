@@ -3,7 +3,7 @@
 
 # ngl.h
 Not a Graphics Library is a stb-style single Header Graphics Library for your Terminal written with ISO C99.
-ngl.h only has around 1000 lines of code, 370 semicolons and 80 open curly braces.
+ngl.h only has around 1000 lines of code, 370 semicolons and 90 open curly braces.
 
 # Usage
 Download ngl.h into your Project's directory: `wget https://raw.githubusercontent.com/carlost0/ngl.h/refs/heads/main/ngl.h`,
@@ -17,37 +17,35 @@ The source code of ngl.h aims to be very understandable, and extensively comment
 Here's a basic Program that with `ngl.h` as in examples/00-bouncing-ball.c
 
 ``` C 
+/* cc examples/10-bouncing-ball.c -o bouncing-ball */
 #define NGL_NO_FONTS
+#define NGL_NO_MATH
 #define NGL_IMPLEMENTATION
 #include "../ngl.h"
 
 static const u32 FPS = 60;
+
 int main() {
     error_t err = 0;
-    u16 rows = 0;
-    u16 cols = 0;
+    u32 w, h;;
 
     /* Nearly all ngl.h functions return an error Code. */
     /* The error Codes are specified in ngl.h and probably self-explanatory. */
-    err |= get_term_size(&rows, &cols);
+    err |= get_term_size(&w, &h);
     if (err) return 1;
 
     /* Specify the Width and Height of the Screen. */
     /* We use rows-1 because only rows would cause Scroling. */
-    screen_t screen = { cols, rows-1, };
-
-    /* The input_ctx_t type stores all the necesary Stuff to get User Input from STDIN on a seperate Thread without blocking Input. */
-    input_ctx_t input_ctx = {0};
-    i32 input = 0;
-
-    /* This Function allocates Heap memory for the Front and Back Buffers. */
+    /* This Function allocates Heap memory for the Front and Back Buffers and returns the Screen Struct. */
     /* A Buffer consists of two 1d arrays, one for the Characters (4 Byte i32), and one for the Colors (3 * 1 Bytes u8 for the Red, Green and Blue channels). */
-    err |= init_screen(&screen);
-    if (err) return 1;
+    screen_t screen = screen_new(w, h-1);
+    if (screen.status != ERR_SUCCESS) return 1;
 
-    /* init_input creates a Mutex for the Input and starts a new Nhread where we will be reading from STDIN. */
-    err = init_input(&input_ctx);
-    if (err) return 1;
+    /* The input_ctx_t type stores all the necesary Stuff to get User Input from /dev/input using the 'poll' syscall. */
+    /* This Function turns terminal Echo of, and opens the Keyboard's File Descriptor, for that the User must be in the 'input' group */
+    input_ctx_t input_ctx = input_new();
+    if (input_ctx.status != ERR_SUCCESS) return 1;
+
 
     u32 ball_x = screen.w / 2;
     u32 ball_y = screen.h / 2;
@@ -58,8 +56,11 @@ int main() {
     /* clear_screen prints the ANSI Escape Codes to set the Cursor's Position to (0,0) and clears everything after it. */
     clear_screen();
 
-    while (input != 'q') {
-        input = get_input(&input_ctx);
+    bool running = true;
+    while (running) {
+        get_keyboard_state(&input_ctx);
+        if (is_key_down(input_ctx, KEY_Q)) running = false;
+
 
         u32 nx = ball_x + vx;
         u32 ny = ball_y + vy;
