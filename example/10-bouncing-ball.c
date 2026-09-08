@@ -1,4 +1,4 @@
-/* cc -o bouncing-ball 10-bouncing-ball.c  */
+/* cc examples/10-bouncing-ball.c -o bouncing-ball */
 #define NGL_NO_FONTS
 #define NGL_NO_MATH
 #define NGL_IMPLEMENTATION
