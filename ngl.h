@@ -460,7 +460,7 @@ ngl_error_t ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 en
     i32 err = dx - dy;
 
     while (true) {
-        u32 i = idx((u32)x0, (u32)y0, screen->w);
+        u32 i = ngl_idx((u32)x0, (u32)y0, screen->w);
         screen->next.chars[i] = c;
         screen->next.colors[i] = color;
 
