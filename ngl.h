@@ -30,13 +30,13 @@
  *   have Namespaces in C
  *
  *  NGL_NO_FONTS:
- *   Disables font support.
+ *   Disables the font module.
  *
  *  NGL_NO_INPUT:
- *   Disables input support.
+ *   Disables the input module.
  *
  *  NGL_NO_MATH:
- *   Disables math support.
+ *   Disables the math module.
  *
  * example:
  * // cc -o test test.c
@@ -126,11 +126,7 @@ typedef enum {
 } ngl_error_t;
 
 /* Basic RGB Color Struct. */
-typedef struct {
-    u8 r;
-    u8 g;
-    u8 b;
-} ngl_color_t;
+typedef struct { u8 r, g, b; } ngl_color_t;
 
 /* Constructor */
 #ifndef ngl_color
@@ -169,9 +165,11 @@ ngl_error_t  ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color);
 
 ngl_error_t  ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color); 
 
-ngl_error_t  ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
 ngl_error_t  ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color);
+
+ngl_error_t  ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
 ngl_error_t  ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
+ngl_error_t  ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
 
 
 #endif /* _NGL_H */
@@ -186,7 +184,7 @@ void ngl_delay(u32 ms) {
     select(0, NULL, NULL, NULL, &tv);
 }
 
-u64  ngl_get_ms(void) {
+u64 ngl_get_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
@@ -396,6 +394,16 @@ ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t co
     return ERR_SUCCESS;
 }
 
+ngl_error_t ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color) {
+    if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
+    if (x >= screen->w || y >= screen->h) return ERR_INVALID_SIZE;
+
+    screen->next.chars[ngl_idx(x, y, screen->w)] = c;
+    screen->next.colors[ngl_idx(x, y, screen->w)] = color;
+
+    return ERR_SUCCESS;
+}
+
 ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color) {
     if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
 
@@ -412,15 +420,6 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color) {
-    if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
-    if (x >= screen->w || y > screen->h) return ERR_INVALID_SIZE;
-
-    screen->next.chars[ngl_idx(x, y, screen->w)] = c;
-    screen->next.colors[ngl_idx(x, y, screen->w)] = color;
-
-    return ERR_SUCCESS;
-}
 
 ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color) {
     if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
@@ -437,6 +436,47 @@ ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, ch
                 screen->next.chars[buf_i] = sprite[sprite_i];
                 screen->next.colors[buf_i] = color;
             }
+        }
+    }
+
+    return ERR_SUCCESS;
+}
+
+ngl_error_t ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color) {
+    if (!screen || !screen->next.colors || !screen->next.chars) return ERR_INVALID_PTR;
+    if (start_x >= screen->w || start_y >= screen->h || end_x >= screen->w || end_y >= screen->h) return ERR_INVALID_SIZE;
+
+    i32 x0 = (i32)start_x;
+    i32 y0 = (i32)start_y;
+    i32 x1 = (i32)end_x;
+    i32 y1 = (i32)end_y;
+
+    i32 dx = abs(x1 - x0);
+    i32 dy = abs(y1 - y0);
+
+    i32 sx = x0 < x1 ? 1 : -1;
+    i32 sy = y0 < y1 ? 1 : -1;
+
+    i32 err = dx - dy;
+
+    while (true) {
+        u32 i = idx((u32)x0, (u32)y0, screen->w);
+        screen->next.chars[i] = c;
+        screen->next.colors[i] = color;
+
+        if (x0 == x1 && y0 == y1)
+            break;
+
+        i32 twice_err = 2 * err;
+
+        if (twice_err > -dy) {
+            err -= dy;
+            x0 += sx;
+        }
+
+        if (twice_err < dx) {
+            err += dx;
+            y0 += sy;
         }
     }
 
@@ -1032,7 +1072,8 @@ ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
 
 #define get_term_size          ngl_get_term_size
 
-#define color                  ngl_color
+/* We already use 'color' as a Parameter in many Funcitons, so we don't strip the prefix here. */
+/* #define color                  ngl_color */
 
 #define init_screen            ngl_init_screen
 #define screen_new             ngl_screen_new
@@ -1041,11 +1082,12 @@ ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
 #define print_screen           ngl_print_screen
 #define clear_bg               ngl_clear_bg
 
+#define set_pixel              ngl_set_pixel
+#define draw_line              ngl_draw_line
 #define draw_rect              ngl_draw_rect
-#define draw_pixel             ngl_draw_pixel
 
-#define draw_screen_borders    ngl_draw_screen_borders
 #define draw_sprite            ngl_draw_sprite
+#define draw_screen_borders    ngl_draw_screen_borders
 
 typedef ngl_error_t            error_t;
 typedef ngl_screen_t           screen_t;
