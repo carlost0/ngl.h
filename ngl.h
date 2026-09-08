@@ -132,6 +132,11 @@ typedef struct {
     u8 b;
 } ngl_color_t;
 
+/* Constructor */
+#ifndef ngl_color
+#define ngl_color(r,g,b) ((ngl_color_t){r,g,b})
+#endif /* ngl_color */
+
 /* These are two Heap allocated 1d arrays where we will store the "Pixels" to. */
 typedef struct {
     ngl_color_t *colors;
@@ -163,7 +168,9 @@ ngl_error_t  ngl_print_screen(ngl_screen_t *screen);
 ngl_error_t  ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color);
 
 ngl_error_t  ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color); 
+
 ngl_error_t  ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
+ngl_error_t  ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color);
 ngl_error_t  ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
 
 
@@ -257,7 +264,7 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
     if (!screen->next.chars) return ERR_INVALID_PTR;
     free(screen->next.chars);
      
-    screen = NULL;
+    *screen = (ngl_screen_t){0};
 
     return ERR_SUCCESS;
 }
@@ -401,6 +408,16 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
         memset(&screen->next.chars[i], c, w);
         for (cx = 0; cx < w; ++cx) screen->next.colors[i+cx] = color;
     }
+
+    return ERR_SUCCESS;
+}
+
+ngl_error_t ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color) {
+    if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
+    if (x >= screen->w || y > screen->h) return ERR_INVALID_SIZE;
+
+    screen->next.chars[ngl_idx(x, y, screen->w)] = c;
+    screen->next.colors[ngl_idx(x, y, screen->w)] = color;
 
     return ERR_SUCCESS;
 }
@@ -1015,6 +1032,8 @@ ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
 
 #define get_term_size          ngl_get_term_size
 
+#define color                  ngl_color
+
 #define init_screen            ngl_init_screen
 #define screen_new             ngl_screen_new
 #define destroy_screen         ngl_destroy_screen
@@ -1022,8 +1041,10 @@ ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
 #define print_screen           ngl_print_screen
 #define clear_bg               ngl_clear_bg
 
-#define draw_screen_borders    ngl_draw_screen_borders
 #define draw_rect              ngl_draw_rect
+#define draw_pixel             ngl_draw_pixel
+
+#define draw_screen_borders    ngl_draw_screen_borders
 #define draw_sprite            ngl_draw_sprite
 
 typedef ngl_error_t            error_t;
