@@ -5,19 +5,20 @@
 
 #include <stdlib.h>
 
-int main() {
-    u16 w, h;
-    get_term_size(&h, &w);
+static const u32 FPS = 30;
 
-    screen_t screen = {w, h-1, {0}, {0}};
-    input_ctx_t input_ctx = {0};
+int main() {
+    u32 w, h;
+    get_term_size(&w, &h);
+    h--;
+
+    screen_t screen = screen_new(w, h);
+    input_ctx_t input_ctx = input_new();
     ngl_font_t font = {.hpad = 2};
+    load_glyphs(&font, NULL);
 
     const char *username = getenv("USER");
 
-    load_glyphs(&font, NULL);
-    init_screen(&screen);
-    init_input(&input_ctx);
 
     clear_screen();
 
@@ -30,6 +31,8 @@ int main() {
         draw_text_fmt(&screen, font, 2, 2, 'l', (color_t){255,255,255}, "Hello, %s!", username);
         draw_screen_borders(&screen, 0, (color_t){255,255,255});
         print_screen(&screen);
+
+        delay(1000/FPS);
     }
 
     destroy_input(&input_ctx);

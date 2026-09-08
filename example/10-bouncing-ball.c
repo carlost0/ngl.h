@@ -1,4 +1,4 @@
-/* cc -o bouncing-ball 00-bouncing-ball.c  */
+/* cc -o bouncing-ball 10-bouncing-ball.c  */
 #define NGL_NO_FONTS
 #define NGL_NO_MATH
 #define NGL_IMPLEMENTATION
@@ -8,29 +8,25 @@ static const u32 FPS = 60;
 
 int main() {
     error_t err = 0;
-    u16 rows = 0;
-    u16 cols = 0;
+    u32 w, h;;
 
     /* Nearly all ngl.h functions return an error Code. */
     /* The error Codes are specified in ngl.h and probably self-explanatory. */
-    err |= get_term_size(&rows, &cols);
+    err |= get_term_size(&w, &h);
     if (err) return 1;
 
     /* Specify the Width and Height of the Screen. */
     /* We use rows-1 because only rows would cause Scroling. */
-    screen_t screen = { cols, rows-1, {0}, {0}};
-
-    /* The input_ctx_t type stores all the necesary Stuff to get User Input from STDIN on a seperate Thread without blocking Input. */
-    input_ctx_t input_ctx = {0};
-
-    /* This Function allocates Heap memory for the Front and Back Buffers. */
+    /* This Function allocates Heap memory for the Front and Back Buffers and returns the Screen Struct. */
     /* A Buffer consists of two 1d arrays, one for the Characters (4 Byte i32), and one for the Colors (3 * 1 Bytes u8 for the Red, Green and Blue channels). */
-    err |= init_screen(&screen);
-    if (err) return 1;
+    screen_t screen = screen_new(w, h-1);
+    if (screen.status != ERR_SUCCESS) return 1;
 
+    /* The input_ctx_t type stores all the necesary Stuff to get User Input from /dev/input using the 'poll' syscall. */
     /* This Function turns terminal Echo of, and opens the Keyboard's File Descriptor, for that the User must be in the 'input' group */
-    err = init_input(&input_ctx);
-    if (err) return 1;
+    input_ctx_t input_ctx = input_new();
+    if (input_ctx.status != ERR_SUCCESS) return 1;
+
 
     u32 ball_x = screen.w / 2;
     u32 ball_y = screen.h / 2;
@@ -41,10 +37,10 @@ int main() {
     /* clear_screen prints the ANSI Escape Codes to set the Cursor's Position to (0,0) and clears everything after it. */
     clear_screen();
 
-    int running = 1;
+    bool running = true;
     while (running) {
         get_keyboard_state(&input_ctx);
-        if (is_key_down(input_ctx, KEY_Q)) running = 0;
+        if (is_key_down(input_ctx, KEY_Q)) running = false;
 
 
         u32 nx = ball_x + vx;
