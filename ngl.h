@@ -951,13 +951,17 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 #define PI 3.14159265358979323846f
 #endif /* PI */
 
+#ifndef ngl_float
+#define ngl_float f32
+#endif /* ngl_float */
+
 typedef struct {
-    f64 x, y;
+    ngl_float x, y;
 } ngl_vec2_t;
 
 /* Constructor */
 #ifndef ngl_vec2
-#define ngl_vec2(x, y) ((ngl_vec2_t){(f64)(x), (f64)(y)})
+#define ngl_vec2(x, y) ((ngl_vec2_t){(ngl_float)(x), (ngl_float)(y)})
 #endif /* ngl_vec2 */
 
 #ifndef ngl_deg_to_rad
@@ -969,17 +973,17 @@ ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b);
 ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b);
 ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b);
 ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec);
+ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 ngl_float);
 
-ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 scalar);
+ngl_float  ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b);
+ngl_float  ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b);
+
 f64        ngl_vec2_len(ngl_vec2_t vec);
-
-f64 ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b);
-f64 ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b);
 ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec);
 ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec);
 ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec);
 /* Rotate Vector by angle in radians */
-ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle);
+ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 
 #ifndef ngl_vec2_mag
 #define ngl_vec2_mag ngl_vec2_len

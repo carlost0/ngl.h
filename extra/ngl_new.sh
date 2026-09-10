@@ -3,6 +3,7 @@
 FILE=$1
 touch $FILE
 
+
 echo "
 #define NGL_IMPLEMENTATION
 #include \"ngl.h\"
@@ -28,9 +29,9 @@ int main() {
 
         /* Game Logic here. */
         
+        clear_bg(&screen, ' ', ngl_color(0,0,0));
         /* Drawing goes here. */
 
-        clear_bg(&screen, ' ', color(0,0,0));
         print_screen(&screen);
     }
 
