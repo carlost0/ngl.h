@@ -14,7 +14,7 @@ See the example directory for a quick Guide on how to use ngl.h.
 The source code of ngl.h aims to be very understandable, and extensively commented so even an English speaking Baby that knows C could understand it.
 
 # Example
-Here's a basic Program that with `ngl.h` as in examples/00-bouncing-ball.c
+Here's a basic Program that with `ngl.h` as in examples/10-bouncing-ball.c
 
 ``` C 
 /* cc examples/10-bouncing-ball.c -o bouncing-ball */
