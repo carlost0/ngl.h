@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2026 Carlos G. S.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -37,6 +37,9 @@
  *
  *  #define NGL_NO_MATH:
  *   Disable the math Module.
+ *
+ *  #define NGL_SERIOUS_ERRORS:
+ *   Removes the ":("/":)" at the end of Error messages.
  *
  *  #define NGL_MATHDEF:
  *   Set the way Functions should be defined in the math Module.
@@ -143,7 +146,7 @@ typedef float    f32;
 /* Most ngl Functions return this Type. */
 /* ngl also gives you the Freedom to write Error Messages yourself. */
 typedef enum {
-    ERR_SUCCESS,
+    ERR_SUCCESS = 0,
 
     ERR_INVALID_SIZE,
     ERR_INVALID_PTR,
@@ -153,8 +156,13 @@ typedef enum {
     ERR_FAILED_FILE_READ,
     ERR_FAILED_FILE_CLOSE,
     ERR_FAILED_POLL,
+
+    _ERR_COUNT,
 } ngl_error_t;
 
+
+/* Get the string out of an Error Code. */
+const char *ngl_error_to_string(ngl_error_t error);
 
 
 
@@ -234,11 +242,11 @@ typedef enum {
 } ngl_key_state_t;
 
 typedef struct {
-    struct pollfd  pfd;
-    struct termios oldt;
-    u8             key_states[KEY_MAX + 1];
-    u8             old_key_states[KEY_MAX + 1];
-    ngl_error_t    status;
+    struct pollfd   pfd;
+    struct termios  oldt;
+    ngl_key_state_t key_states[KEY_MAX + 1];
+    ngl_key_state_t old_key_states[KEY_MAX + 1];
+    ngl_error_t     status;
 } ngl_input_ctx_t;
 
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
@@ -378,6 +386,7 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 
 
 
+#define NGL_IMPLEMENTATION
 #ifdef NGL_IMPLEMENTATION
 
 /*
@@ -387,6 +396,54 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
  *
  */
 
+#ifdef NGL_SERIOUS_ERRORS
+const char *ngl_error_to_string(ngl_error_t error) {
+    switch (error) {
+        case ERR_SUCCESS:
+            return "No error.";
+        case ERR_FAILED_POLL:
+            return "Failed poll.";
+        case ERR_INVALID_PTR:
+            return "Invalid pointer.";
+        case ERR_INVALID_SIZE:
+            return "Invalid size.";
+        case ERR_FAILED_MALLOC:
+            return "Failed malloc.";
+        case ERR_FAILED_FILE_READ:
+            return "Failed to read file.";
+        case ERR_FAILED_FILE_OPEN:
+            return "Failed to open file.";
+        case ERR_FAILED_FILE_CLOSE:
+            return "Failed to close file.";
+        default:
+            return "Unknown error";
+    }
+}
+
+#else 
+const char *ngl_error_to_string(ngl_error_t error) {
+    switch (error) {
+        case ERR_SUCCESS:
+            return "No error! :)";
+        case ERR_FAILED_POLL:
+            return "Failed poll. :(";
+        case ERR_INVALID_PTR:
+            return "Invalid pointer. :(";
+        case ERR_INVALID_SIZE:
+            return "Invalid size. :(";
+        case ERR_FAILED_MALLOC:
+            return "Failed malloc. :(";
+        case ERR_FAILED_FILE_READ:
+            return "Failed to read file. :(";
+        case ERR_FAILED_FILE_OPEN:
+            return "Failed to open file. :(";
+        case ERR_FAILED_FILE_CLOSE:
+            return "Failed to close file. :(";
+        default:
+            return "Unknown error :|";
+    }
+}
+#endif /* NGL_SERIOUS_ERRORS */
 #include <sys/select.h>
 
 void ngl_delay(u32 ms) {
@@ -450,7 +507,7 @@ ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
 }
 
 ngl_screen_t ngl_screen_new(u32 w, u32 h) {
-    ngl_screen_t screen = {w, h, {0}, {0}, 0};
+    ngl_screen_t screen = {w, h, {0}, {0}, ERR_SUCCESS};
     ngl_error_t err = ngl_init_screen(&screen);
     screen.status = err;
 
@@ -707,7 +764,7 @@ ngl_error_t ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 en
  */
 
 ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key) {
-    if (key > KEY_MAX) return -1;
+    if (key > KEY_MAX) return KSTATE_UP;
 
     if (ctx.old_key_states[key] == 1 && ctx.key_states[key] == 0) return KSTATE_RELEASED;
     return ctx.key_states[key];
@@ -810,7 +867,7 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
         return ERR_FAILED_POLL;
     }
 
-    memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states) / sizeof(u8));
+    memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states) / sizeof(ngl_key_state_t));
 
     if (fd->revents & POLLIN) {
         struct input_event events[KEY_MAX + 1];
@@ -832,7 +889,7 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
             struct input_event *ev = &events[i];
 
             if (ev->type == EV_KEY) {
-                ctx->key_states[ev->code] = ev->value;
+                ctx->key_states[ev->code] = (ngl_key_state_t)ev->value;
             }
         }
     }
@@ -1025,7 +1082,7 @@ ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, c
     if (!screen || !screen->next.chars || !screen->next.colors || !font.glyphs) return ERR_INVALID_PTR;
     if (!str) return ERR_INVALID_PTR;
 
-    ngl_error_t err = 0;
+    ngl_error_t err = ERR_SUCCESS;
     u32 cx = x, cy = y;
     while (*str != '\0') {
         /* Basic ASCII escape Codes. */
