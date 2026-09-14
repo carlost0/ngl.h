@@ -10,7 +10,7 @@ void print_vector(const char *prefix, vec2_t vec) {
     printf("%s(%f|%f)\n", prefix, vec.x, vec.y);
 }
 
-int main() {
+int main(void) {
     vec2_t base_vec1       = vec2(2, 1);
     vec2_t base_vec2       = vec2(1, -4);
     f64    scalar          = 3.4;

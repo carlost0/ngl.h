@@ -6,7 +6,7 @@
 
 static const u32 FPS = 60;
 
-int main() {
+int main(void) {
     error_t err = 0;
     u32 w, h;;
 

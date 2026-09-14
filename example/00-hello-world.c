@@ -3,11 +3,9 @@
 #define NGL_NO_MATH
 #include "../ngl.h"
 
-#include <stdlib.h>
-
 static const u32 FPS = 30;
 
-int main() {
+int main(void) {
     u32 w, h;
     get_term_size(&w, &h);
     h--;
@@ -17,7 +15,7 @@ int main() {
     ngl_font_t font = {.hpad = 2};
     load_glyphs(&font, NULL);
 
-    const char *username = getenv("USER");
+    const char *username = "null";
 
 
     clear_screen();

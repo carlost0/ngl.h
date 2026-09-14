@@ -4,11 +4,11 @@ FILE=$1
 touch $FILE
 
 
-echo "
+echo "/* cc $FILE -o main */
 #define NGL_IMPLEMENTATION
 #include \"ngl.h\"
 
-int main() {
+int main(void) {
     u32 w, h;
     get_term_size(&w, &h);
 

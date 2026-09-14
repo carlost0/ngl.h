@@ -24,7 +24,7 @@ int check_collision(i32 x1, i32 y1, i32 w1, i32 h1,
     return 1;
 }
 
-int main() {
+int main(void) {
     u32 w, h;
 new_game:
     get_term_size(&w, &h);

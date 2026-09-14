@@ -142,7 +142,9 @@
 #define NGL_VERSION_MINOR 1
 #define NGL_VERSION_PATCH 0
 
-#define NGL_VERSION_STR "0.1-dev"
+#define NGL_IS_RELEASE 0
+
+#define NGL_VERSION_STR "0.1.0-dev"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -538,6 +540,9 @@ ngl_error_t ngl_get_term_size(u32 *w, u32 *h) {
 }
 
 ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
+    if (!screen) return ERR_INVALID_PTR;
+    if (screen->w <= 1 || screen->h <= 1) return ERR_INVALID_SIZE;
+
     u32 n = screen->w * screen->h;
 
     /* Allocate front Buffer. */
@@ -572,7 +577,7 @@ ngl_screen_t ngl_screen_new(u32 w, u32 h) {
 }
 
 ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
-    if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
+    if (!screen) return ERR_INVALID_PTR;
 
     /* Free front Buffer. */
     if (!screen->current.colors) return ERR_INVALID_PTR;
@@ -595,7 +600,7 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
 
 
 ngl_error_t ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color) {
-    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
     /* Set the whole screen to the specified Chars and Colors. */
     u32 i;
@@ -614,7 +619,7 @@ void ngl_clear_screen(void) {
 }
 
 ngl_error_t ngl_print_screen(ngl_screen_t *screen) {
-    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
     /* The length of "\x1b[38;2;255;255;255mC" */
     u32 worst_case_pixel = 23;
@@ -663,7 +668,8 @@ ngl_error_t ngl_print_screen(ngl_screen_t *screen) {
 }
 
 ngl_error_t ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color) {
-    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
+    if (screen->w <= 1 || screen->h <= 1) return ERR_INVALID_SIZE;
 
     u32 w = screen->w;
     u32 h = screen->h;
@@ -748,7 +754,7 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
 
 
 ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color) {
-    if (!screen || !(screen->next.chars && screen->next.chars)) return ERR_INVALID_PTR;
+    if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
     if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
 
@@ -822,16 +828,16 @@ ngl_error_t ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 en
 ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key) {
     if (key > KEY_MAX) return KSTATE_UP;
 
-    if (ctx.old_key_states[key] == 1 && ctx.key_states[key] == 0) return KSTATE_RELEASED;
+    if (ctx.old_key_states[key] != KSTATE_UP && ctx.key_states[key] == KSTATE_UP) return KSTATE_RELEASED;
     return ctx.key_states[key];
 }
 
-bool _test_bit(const u64 *bits, i32 bit) {
+static inline bool _ngl_test_bit(const u64 *bits, i32 bit) {
     return bits[bit / (sizeof(u64) * 8)] &
            (1UL << (bit % (sizeof(u64) * 8)));
 }
 
-bool _is_keyboard(i32 fd) {
+static bool _ngl_is_keyboard(i32 fd) {
     unsigned long ev_bits[(EV_MAX + 1 +
                             sizeof(unsigned long) * 8 - 1) /
                            (sizeof(unsigned long) * 8)] = {0};
@@ -840,21 +846,21 @@ bool _is_keyboard(i32 fd) {
                              sizeof(unsigned long) * 8 - 1) /
                             (sizeof(unsigned long) * 8)] = {0};
 
-    if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0)
+    if (ioctl(fd, (int)EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0)
         return false;
 
-    if (!_test_bit(ev_bits, EV_KEY))
+    if (!_ngl_test_bit(ev_bits, EV_KEY))
         return false;
 
-    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0)
+    if (ioctl(fd, (int)EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0)
         return false;
-    return _test_bit(key_bits, KEY_A) &&
-       _test_bit(key_bits, KEY_Z) &&
-       _test_bit(key_bits, KEY_ENTER) &&
-       _test_bit(key_bits, KEY_SPACE);
+    return _ngl_test_bit(key_bits, KEY_A) &&
+       _ngl_test_bit(key_bits, KEY_Z) &&
+       _ngl_test_bit(key_bits, KEY_ENTER) &&
+       _ngl_test_bit(key_bits, KEY_SPACE);
 }
 
-i32 _find_keyboard(void) {
+static i32 _ngl_find_keyboard(void) {
     char path[64];
     u32 i;
     for (i = 0; i < 16; ++i) {
@@ -864,7 +870,7 @@ i32 _find_keyboard(void) {
         if (fd < 0)
             continue;
 
-        if (_is_keyboard(fd))
+        if (_ngl_is_keyboard(fd))
             return fd;
 
         close(fd);
@@ -874,7 +880,7 @@ i32 _find_keyboard(void) {
 }
 
 ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
-    int fd = _find_keyboard();
+    int fd = _ngl_find_keyboard();
     if (fd == -1) {
         return ERR_FAILED_FILE_OPEN;
     }
@@ -896,7 +902,7 @@ ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
     return ERR_SUCCESS;
 }
 
-ngl_input_ctx_t ngl_input_new() {
+ngl_input_ctx_t ngl_input_new(void) {
     ngl_input_ctx_t ctx = {0};
     ngl_error_t err = ngl_init_input(&ctx);
     ctx.status = err;
@@ -1092,6 +1098,8 @@ static const u32 NGL_DEFAULT_GLYPHS[] = {
 };
 
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
+    if (!font) return ERR_INVALID_PTR;
+
     if (font->w == 0) font->w = NGL_DEFAULT_GLYPH_W;
     if (font->h == 0) font->h = NGL_DEFAULT_GLYPH_H;
     if (font->hpad == 0) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
@@ -1106,7 +1114,7 @@ ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
 
 ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph) {
     if (!screen || !screen->next.chars || !screen->next.colors || !font.glyphs) return ERR_INVALID_PTR;
-    if (x > screen->w || y > screen->h || font.w > screen->w - x || font.h > screen->h - y) return ERR_INVALID_SIZE;
+    if (x >= screen->w || y >= screen->h || font.w > screen->w - x || font.h > screen->h - y) return ERR_INVALID_SIZE;
 
     /* All the alphanumeric Symbols in the ASCII Table. */
     char startc = '!';
@@ -1143,23 +1151,34 @@ ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, c
     u32 cx = x, cy = y;
     while (*str != '\0') {
         /* Basic ASCII escape Codes. */
+        if (*str == '\n') { /* New line. */
+            cx = x;
+            cy += font.h + font.vpad;
+            str++;
+            continue;
+        } 
         if (*str == '\t')      cx += 4 * font.w + font.hpad;  /* Horizontal Tab. */
         else if (*str == '\v') cy += 4 * font.h + font.vpad;  /* Vertical Tab.   */
         else if (*str == '\r') cx = x;                        /* Cariage Return. */
-        else if (*str == '\a') printf("\a\n");                /* Terminal Bell.  */
+        else if (*str == '\a') printf("\a");                /* Terminal Bell.  */
         else {
+
+            if (*str == ' ') cx += font.w + font.hpad;
             err = ngl_draw_glyph(screen, font,  cx, cy, c, color, *str);
+            if (err) {
+                str++;
+                continue;
+            }
+
             cx += font.w + font.hpad;
+            /* Wrap around. */
+            if (cx + font.w + font.hpad > screen->w) {
+                cx = x;
+                cy += font.h + font.vpad;
+            }
         }
 
-        if (err) break;
 
-
-        /* Wrap around and Newline. */
-        if (cx + font.w >= screen->w || *str == '\n') {
-            cx = x;
-            cy += font.h + font.vpad;
-        } 
         str++;
     }
     return err;
@@ -1319,9 +1338,8 @@ typedef ngl_color_t            color_t;
 #ifndef NGL_NO_INPUT
 
 #define is_key_down            ngl_is_key_down
-#define is_key_pressed         ngl_is_key_pressed
-#define is_key_released        ngl_is_key_released
 #define is_key_pressed_repeat  ngl_is_key_pressed_repeat
+#define is_key_released        ngl_is_key_released
 
 typedef ngl_input_ctx_t        input_ctx_t;
 typedef ngl_key_state_t        key_state_t;
