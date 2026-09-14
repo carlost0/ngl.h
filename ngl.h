@@ -142,9 +142,9 @@
 #define NGL_VERSION_MINOR 1
 #define NGL_VERSION_PATCH 0
 
-#define NGL_IS_RELEASE 0
+#define NGL_IS_RELEASE 1
 
-#define NGL_VERSION_STR "0.1.0-dev"
+#define NGL_VERSION_STR "0.1.0-release"
 
 /* More helpful types */
 typedef int8_t    i8;
