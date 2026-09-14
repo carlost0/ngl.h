@@ -6,7 +6,7 @@ Not a Graphics Library is a stb-style single Header Graphics Library for your Te
 ngl.h only has around 800 lines of actual code, 400 semicolons and 100 open curly braces.
 
 # Usage
-Download ngl.h into your Project's directory: `wget https://raw.githubusercontent.com/carlost0/ngl.h/refs/heads/main/ngl.h`,
+Download ngl.h into your Project's directory: `wget https://github.com/carlost0/ngl.h/releases/download/v0.1.0/ngl.h`,
 then include ngl.h in your Program.
 
 See the example directory for a quick Guide on how to use ngl.h.
