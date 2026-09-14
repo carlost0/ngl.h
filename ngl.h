@@ -280,11 +280,8 @@ ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
 #define ngl_is_key_down(ctx, key)           (ngl_get_key_state(ctx, key) > 0 && ngl_get_key_state(ctx, key) < 3)
 #endif /* is_key_down */
 
-#ifndef ngl_is_key_pressed
-#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(ctx, key) == KSTATE_PRESSED)
-#endif /* is_key_pressed */
 
-#ifdef  ngl_is_key_pressed_repeat
+#ifndef  ngl_is_key_pressed_repeat
 #define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(ctx, key) == KSTATE_REPEAT)
 #endif /* is_key_pressed_repeat */
 
