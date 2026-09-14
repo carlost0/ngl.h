@@ -25,17 +25,17 @@
  *  Include ngl.h in your file and define the NGL_IMPLEMENTATION Macro in your main File.
  * 
  * configuration Macros:
- *  NGL_UNSTRIP_PREFIX: 
+ *  #define NGL_UNSTRIP_PREFIX: 
  *   Prepends "ngl_" to all functions, this is a Workaround as we don't 
  *   have Namespaces in C
  *
- *  NGL_NO_FONTS:
+ *  #define NGL_NO_FONTS:
  *   Disables the font module.
  *
- *  NGL_NO_INPUT:
+ *  #define NGL_NO_INPUT:
  *   Disables the input module.
  *
- *  NGL_NO_MATH:
+ *  #define NGL_NO_MATH:
  *   Disables the math module.
  *
  * example:
