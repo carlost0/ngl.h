@@ -26,17 +26,25 @@
  * 
  * configuration Macros:
  *  #define NGL_UNSTRIP_PREFIX: 
- *   Prepends "ngl_" to all functions, this is a Workaround as we don't 
+ *   Prepend "ngl_" to all functions, this is a Workaround as we don't 
  *   have Namespaces in C
  *
  *  #define NGL_NO_FONTS:
- *   Disables the font module.
+ *   Disable the font Module.
  *
  *  #define NGL_NO_INPUT:
- *   Disables the input module.
+ *   Disable the input Module.
  *
  *  #define NGL_NO_MATH:
- *   Disables the math module.
+ *   Disable the math Module.
+ *
+ *  #define NGL_MATHDEF:
+ *   Set the way Functions should be defined in the math Module.
+ *   Default: static inline.
+ *
+ *  #define ngl_float [f32 or f64]
+ *   Set the type used for floating point math in NGL_MATH.
+ *   Default f32.
  *
  * example:
  * // cc -o test test.c
@@ -82,7 +90,6 @@
  * }
  *
 */
-
 #ifndef _NGL_H
 #define _NGL_H
 
@@ -95,6 +102,29 @@
 #include <string.h>
 
 #include <time.h>
+
+/* Input Dependencies. */
+#ifndef NGL_NO_INPUT
+
+#undef _GNU_SOURCE
+#define _GNU_SOURCE
+
+#include <fcntl.h>
+#include <linux/input.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <poll.h>
+#include <termios.h>
+
+#endif /* NGL_NO_INPUT */
+
+/* Math Dependencies. */
+#ifndef NGL_NO_MATH
+#include <math.h>
+#endif /* NGL_NO_MATH */
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -124,6 +154,17 @@ typedef enum {
     ERR_FAILED_FILE_CLOSE,
     ERR_FAILED_POLL,
 } ngl_error_t;
+
+
+
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl main Module.                             |
+ * +-------------------------------------------------------------------------+
+ *
+ */
+
 
 /* Basic RGB Color Struct. */
 typedef struct { u8 r, g, b; } ngl_color_t;
@@ -172,8 +213,179 @@ ngl_error_t  ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, c
 ngl_error_t  ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
 
 
+
+
+#ifndef NGL_NO_INPUT
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl input Module.                            |
+ * +-------------------------------------------------------------------------+
+ *
+ */
+
+
+
+typedef enum {
+    KSTATE_UP       = 0,
+    KSTATE_DOWN     = 1,
+    KSTATE_REPEAT   = 2,
+    KSTATE_RELEASED = 3,
+} ngl_key_state_t;
+
+typedef struct {
+    struct pollfd  pfd;
+    struct termios oldt;
+    u8             key_states[KEY_MAX + 1];
+    u8             old_key_states[KEY_MAX + 1];
+    ngl_error_t    status;
+} ngl_input_ctx_t;
+
+ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
+ngl_input_ctx_t ngl_input_new(void);
+ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
+
+ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key);
+ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
+
+
+#ifndef ngl_is_key_down
+#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(ctx, key) > 0 && ngl_get_key_state(ctx, key) < 3)
+#endif /* is_key_down */
+
+#ifndef ngl_is_key_pressed
+#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(ctx, key) == KSTATE_PRESSED)
+#endif /* is_key_pressed */
+
+#ifdef  ngl_is_key_pressed_repeat
+#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(ctx, key) == KSTATE_REPEAT)
+#endif /* is_key_pressed_repeat */
+
+#ifndef ngl_is_key_released
+#define ngl_is_key_released(ctx, key)       (ngl_get_key_state(ctx, key) == KSTATE_RELEASED)
+#endif /* is_key_down */
+
+
+#endif /* NGL_NO_INPUT */
+
+
+
+
+#ifndef NGL_NO_FONTS
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl font Module.                             |
+ * +-------------------------------------------------------------------------+
+ *
+ */
+
+
+
+typedef struct {
+    u32 w, h;
+    u8  hpad, vpad;
+    const u32 *glyphs;
+} ngl_font_t;
+
+
+/* 
+ * ngl fonts are made with nglfontbuilder.c, found in extra/.
+ * Since implementing ttf support would be overkill (I'm to lazy),
+ * we must make some limitations:
+ *  - The Glyphs must not be bigger than 5x5 pixels.
+ *  - The Glyphs must only be symbols found in the ASCII table starting from '!' until '~'.
+ *  - The Glyphs must be ordered the same way as they appear in the ASCII table.
+ */
+
+/* Load specified glyphs into font, if the second parameter is NULL, the default glyphs will be used. */
+ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs);
+
+ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph);
+ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str);
+ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
+
+#endif /* NGL_NO_FONTS */
+
+
+
+
+#ifndef NGL_NO_MATH
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl math Module.                             |
+ * +-------------------------------------------------------------------------+
+ *
+ */
+
+
+
+#ifndef NGL_MATHDEF
+#define NGL_MATHDEF static inline 
+#endif /* NGL_MATHDEF */
+
+
+#ifndef ngl_float
+#define ngl_float f32
+#endif /* ngl_float */
+
+typedef struct {
+    ngl_float x, y;
+} ngl_vec2_t;
+
+/* Constructor */
+#ifndef ngl_vec2
+#define ngl_vec2(x, y) ((ngl_vec2_t){(ngl_float)(x), (ngl_float)(y)})
+#endif /* ngl_vec2 */
+
+#ifndef ngl_deg_to_rad
+#define ngl_deg_to_rad(theta) ((theta) * (PI / 180.0f))
+#endif /* ngl_deg_to_rad */
+
+#ifndef PI
+#define PI 3.14159265358979323846f
+#endif /* PI */
+
+NGL_MATHDEF ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, ngl_float scalar);
+
+NGL_MATHDEF ngl_float  ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b);
+NGL_MATHDEF ngl_float  ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b);
+
+NGL_MATHDEF ngl_float  ngl_vec2_len(ngl_vec2_t vec);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec);
+
+/* Rotate Vector by angle in radians */
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
+
+#ifndef ngl_vec2_mag
+#define ngl_vec2_mag ngl_vec2_len
+#endif /* ngl_vec2_mag */
+
+
+
+#endif /* NGL_NO_MATH */
+
 #endif /* _NGL_H */
+
+
+
+
 #ifdef NGL_IMPLEMENTATION
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl main Implementation.                     |
+ * +-------------------------------------------------------------------------+
+ *
+ */
 
 #include <sys/select.h>
 
@@ -483,71 +695,16 @@ ngl_error_t ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 en
     return ERR_SUCCESS;
 }
 
-#endif /* NGL_IMPLEMENTATION */
+
 
 #ifndef NGL_NO_INPUT
-#ifndef _NGL_INPUT_H
-#define _NGL_INPUT_H
 
-#undef _GNU_SOURCE
-#define _GNU_SOURCE
-#include <fcntl.h>
-#include <linux/input.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <errno.h>
-#include <poll.h>
-#include <termios.h>
-
-enum ngl_key_state_e {
-    KSTATE_UP       = 0,
-    KSTATE_DOWN     = 1,
-    KSTATE_REPEAT   = 2,
-    KSTATE_RELEASED = 3,
-};
-
-struct ngl_input_ctx_s {
-    struct pollfd  pfd;
-    struct termios oldt;
-    u8             key_states[KEY_MAX + 1];
-    u8             old_key_states[KEY_MAX + 1];
-    ngl_error_t    status;
-} ;
-
-typedef struct ngl_input_ctx_s ngl_input_ctx_t;
-typedef enum   ngl_key_state_e ngl_key_state_t;
-
-ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
-ngl_input_ctx_t ngl_input_new(void);
-ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
-
-ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key);
-ngl_error_t     ngl_get_keyboard_state(ngl_input_ctx_t *ctx);
-
-
-
-#ifndef ngl_is_key_down
-#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(ctx, key) > 0 && ngl_get_key_state(ctx, key) < 3)
-#endif /* is_key_down */
-
-#ifndef ngl_is_key_pressed
-#define ngl_is_key_pressed(ctx, key)        (ngl_get_key_state(ctx, key) == KSTATE_PRESSED)
-#endif /* is_key_pressed */
-
-#ifdef  ngl_is_key_pressed_repeat
-#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(ctx, key) == KSTATE_REPEAT)
-#endif /* is_key_pressed_repeat */
-
-#ifndef ngl_is_key_released
-#define ngl_is_key_released(ctx, key)       (ngl_get_key_state(ctx, key) == KSTATE_RELEASED)
-#endif /* is_key_down */
-
-
-#endif /* _NGL_INPUT_H */
-
-#ifdef NGL_IMPLEMENTATION
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl input Implementation.                    |
+ * +-------------------------------------------------------------------------+
+ *
+ */
 
 ngl_key_state_t ngl_get_key_state(ngl_input_ctx_t ctx, u16 key) {
     if (key > KEY_MAX) return -1;
@@ -683,12 +840,16 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
 }
 
 
-#endif /* NGL_IMPLEMENTATION */
 #endif /* NGL_NO_INPUT*/
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl font Implementation.                     |
+ * +-------------------------------------------------------------------------+
+ *
+ */
+
 
 #ifndef NGL_NO_FONTS
-#ifndef _NGL_FONTS_H
-#define _NGL_FONTS_H
 
 #ifndef NGL_GLYPH
 #define NGL_GLYPH(a, b, c, d, e) \
@@ -700,6 +861,10 @@ ngl_error_t ngl_get_keyboard_state(ngl_input_ctx_t *ctx) {
 #endif /* NGL_GLYPH */
 
 
+#define NGL_DEFAULT_GLYPH_W (5)
+#define NGL_DEFAULT_GLYPH_H (5)
+#define NGL_DEFAULT_GLYPH_VPAD (1)
+#define NGL_DEFAULT_GLYPH_HPAD (1)
 
 /* 
  * This font is made with nglfontbuilder.c, found in extra/.
@@ -812,27 +977,6 @@ static const u32 NGL_DEFAULT_GLYPHS[] = {
     /* ~ */ NGL_GLYPH(0b00000,0b00010,0b10101,0b01000,0b00000),
 };
 
-#define NGL_DEFAULT_GLYPH_W (5)
-#define NGL_DEFAULT_GLYPH_H (5)
-#define NGL_DEFAULT_GLYPH_VPAD (1)
-#define NGL_DEFAULT_GLYPH_HPAD (1)
-
-typedef struct {
-    u32 w, h;
-    u8  hpad, vpad;
-    const u32 *glyphs;
-} ngl_font_t;
-
-/* Load specified glyphs into font, if the second parameter is NULL, the default glyphs will be used. */
-ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs);
-
-ngl_error_t ngl_draw_glyph(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, char glyph);
-ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *str);
-ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
-
-#endif /* _NGL_FONTS_H */
-#ifdef NGL_IMPLEMENTATION
-
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
     if (font->w <= 0) font->w = NGL_DEFAULT_GLYPH_W;
     if (font->h <= 0) font->h = NGL_DEFAULT_GLYPH_H;
@@ -939,99 +1083,58 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
     return ERR_SUCCESS;
 }
 
-#endif /* NGL_IMPLEMENTATION */
 #endif /* NGL_NO_FONTS */
 
+
+
+
 #ifndef NGL_NO_MATH
-#ifndef _NGL_MATH
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl math Implementation.                     |
+ * +-------------------------------------------------------------------------+
+ *
+ */
 
-#include <math.h>
-
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif /* PI */
-
-#ifndef ngl_float
-#define ngl_float f32
-#endif /* ngl_float */
-
-typedef struct {
-    ngl_float x, y;
-} ngl_vec2_t;
-
-/* Constructor */
-#ifndef ngl_vec2
-#define ngl_vec2(x, y) ((ngl_vec2_t){(ngl_float)(x), (ngl_float)(y)})
-#endif /* ngl_vec2 */
-
-#ifndef ngl_deg_to_rad
-#define ngl_deg_to_rad(theta) ((theta) * (PI / 180.0f))
-#endif /* ngl_deg_to_rad */
-
-ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b);
-ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b);
-ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b);
-ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b);
-ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec);
-ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 ngl_float);
-
-ngl_float  ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b);
-ngl_float  ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b);
-
-f64        ngl_vec2_len(ngl_vec2_t vec);
-ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec);
-ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec);
-ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec);
-/* Rotate Vector by angle in radians */
-ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
-
-#ifndef ngl_vec2_mag
-#define ngl_vec2_mag ngl_vec2_len
-#endif /* ngl_vec2_mag */
-
-#endif /* _NGL_MATH */
-
-#ifdef NGL_IMPLEMENTATION
-
-ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b) {
     return ngl_vec2(a.x + b.x, a.y + b.y);
 }
 
-ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b) {
     return ngl_vec2(a.x - b.x, a.y - b.y);
 }
 
 
-ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b) {
     return ngl_vec2(a.x * b.x, a.y * b.y);
 }
 
-f64 ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_float ngl_vec2_dot(ngl_vec2_t a, ngl_vec2_t b) {
     return a.x * b.x + a.y * b.y;
 }
 
-f64 ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_float ngl_vec2_cross(ngl_vec2_t a, ngl_vec2_t b) {
     return a.x * b.y - a.y * b.x;
 }
 
-ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_div(ngl_vec2_t a, ngl_vec2_t b) {
     return ngl_vec2(a.x / b.x, a.y / b.y);
 }
 
-ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_sqrt(ngl_vec2_t vec) {
     return ngl_vec2(sqrtf(vec.x), sqrtf(vec.y));
 }
 
-ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, f64 scalar) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_scale(ngl_vec2_t vec, ngl_float scalar) {
     return ngl_vec2(vec.x * scalar, vec.y * scalar);
 }
 
-f64 ngl_vec2_len(ngl_vec2_t vec) {
+NGL_MATHDEF ngl_float ngl_vec2_len(ngl_vec2_t vec) {
     return sqrtf(vec.x * vec.x + vec.y * vec.y);
 }
 
-ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec) {
-    f64 length = ngl_vec2_len(vec);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec) {
+    ngl_float length = ngl_vec2_len(vec);
 
     if (length == 0.0) {
         return ngl_vec2(0.0, 0.0);
@@ -1040,17 +1143,17 @@ ngl_vec2_t ngl_vec2_normalize(ngl_vec2_t vec) {
     return ngl_vec2(vec.x / length, vec.y / length);
 }
 
-ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot90cw(ngl_vec2_t vec) {
     return ngl_vec2(-vec.y, vec.x);
 }
 
-ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec) {
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot90ccw(ngl_vec2_t vec) {
     return ngl_vec2(vec.y, -vec.x);
 }
 
-ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
-    f64 c = cosf(angle);
-    f64 s = sinf(angle);
+NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle) {
+    ngl_float c = cosf(angle);
+    ngl_float s = sinf(angle);
 
     ngl_vec2_t res = {0};
 
@@ -1060,9 +1163,9 @@ ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, f64 angle) {
     return res;
 }
 
-#endif /* NGL_IMPLEMENTATION */
 
 #endif /* NGL_NO_MATH */
+#endif /* NGL_IMPLEMENTATION */
 
 #ifndef _NGL_PREFIX
 #define _NGL_PREFIX
