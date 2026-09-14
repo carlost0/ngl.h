@@ -279,6 +279,8 @@ ngl_error_t  ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t c
 ngl_error_t  ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color);
 
 ngl_error_t  ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
+/* Draw a string with w*h dimensions. */
+/* NOTE: The String must be at least w*h Bytes long, else there would be a Buffer overflow. */ 
 ngl_error_t  ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
 ngl_error_t  ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
 
@@ -542,6 +544,7 @@ ngl_error_t ngl_get_term_size(u32 *w, u32 *h) {
 ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
     if (!screen) return ERR_INVALID_PTR;
     if (screen->w <= 1 || screen->h <= 1) return ERR_INVALID_SIZE;
+    if (screen->w > 10000 || screen->h > 10000) return ERR_INVALID_SIZE;
 
     u32 n = screen->w * screen->h;
 
@@ -579,23 +582,24 @@ ngl_screen_t ngl_screen_new(u32 w, u32 h) {
 ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
     if (!screen) return ERR_INVALID_PTR;
 
+    ngl_error_t err = ERR_SUCCESS;
     /* Free front Buffer. */
-    if (!screen->current.colors) return ERR_INVALID_PTR;
-    NGL_FREE(screen->current.colors);
+    if (screen->current.colors) NGL_FREE(screen->current.colors);
+    else err = ERR_INVALID_PTR;
 
-    if (!screen->current.chars) return ERR_INVALID_PTR;
-    NGL_FREE(screen->current.chars);
+    if (screen->current.chars) NGL_FREE(screen->current.chars);
+    else err = ERR_INVALID_PTR;
 
     /* Free back Buffer. */
-    if (!screen->next.colors) return ERR_INVALID_PTR;
-    NGL_FREE(screen->next.colors);
+    if (screen->next.colors) NGL_FREE(screen->next.colors);
+    else err = ERR_INVALID_PTR;
 
-    if (!screen->next.chars) return ERR_INVALID_PTR;
-    NGL_FREE(screen->next.chars);
+    if (screen->next.chars) NGL_FREE(screen->next.chars);
+    else err = ERR_INVALID_PTR;
      
     *screen = (ngl_screen_t){0};
 
-    return ERR_SUCCESS;
+    return err;
 }
 
 
@@ -753,10 +757,11 @@ ngl_error_t ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char
 }
 
 
+/* NOTE: The String must be at least w*h Bytes long, else there would be a Buffer overflow. */ 
 ngl_error_t ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color) {
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
-    if (x + w > screen->w || y + h > screen->h) return ERR_INVALID_SIZE;
+    if (x >= screen->w || w > screen->w - x || y >= screen->h || h > screen->h - y) return ERR_INVALID_SIZE;
 
     u32 cx, cy;
     for (cy = y; cy < y + h; ++cy) {
@@ -1160,10 +1165,9 @@ ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, c
         if (*str == '\t')      cx += 4 * font.w + font.hpad;  /* Horizontal Tab. */
         else if (*str == '\v') cy += 4 * font.h + font.vpad;  /* Vertical Tab.   */
         else if (*str == '\r') cx = x;                        /* Cariage Return. */
-        else if (*str == '\a') printf("\a");                /* Terminal Bell.  */
+        else if (*str == ' ') cx += font.w + font.hpad;
         else {
 
-            if (*str == ' ') cx += font.w + font.hpad;
             err = ngl_draw_glyph(screen, font,  cx, cy, c, color, *str);
             if (err) {
                 str++;
@@ -1172,7 +1176,7 @@ ngl_error_t ngl_draw_text(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 y, c
 
             cx += font.w + font.hpad;
             /* Wrap around. */
-            if (cx + font.w + font.hpad > screen->w) {
+            if (cx + font.w > screen->w) {
                 cx = x;
                 cy += font.h + font.vpad;
             }
