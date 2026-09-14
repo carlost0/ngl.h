@@ -137,6 +137,13 @@
 #include <math.h>
 #endif /* NGL_NO_MATH */
 
+/* ngl.h Version. */
+#define NGL_VERSION_MAJOR 0
+#define NGL_VERSION_MINOR 1
+#define NGL_VERSION_PATCH 0
+
+#define NGL_VERSION_STR "0.1-dev"
+
 /* More helpful types */
 typedef int8_t    i8;
 typedef int16_t  i16;
