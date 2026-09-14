@@ -144,7 +144,10 @@ typedef double   f64;
 typedef float    f32;
 
 /* Most ngl Functions return this Type. */
-/* ngl also gives you the Freedom to write Error Messages yourself. */
+
+/* ngl gives you the Freedom to write Error Messages yourself,
+ * or just use the error_to_string function.
+ */
 typedef enum {
     ERR_SUCCESS = 0,
 
@@ -386,7 +389,6 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 
 
 
-#define NGL_IMPLEMENTATION
 #ifdef NGL_IMPLEMENTATION
 
 /*
@@ -1228,6 +1230,7 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle) {
 #define _NGL_PREFIX
 #ifndef NGL_UNSTRIP_PREFIX
 
+#define error_to_string        ngl_error_to_string
 #define idx                    ngl_idx
 
 #define delay                  ngl_delay
