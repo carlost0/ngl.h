@@ -25,6 +25,14 @@
  *  Include ngl.h in your file and define the NGL_IMPLEMENTATION Macro in your main File.
  * 
  * configuration Macros:
+ *  #define NGL_MALLOC:
+ *   Set the Memory Allocator used in ngl.h.
+ *   Default: stdlib malloc.
+ *
+ *  #define NGL_FREE:
+ *   Set the free function used in ngl.h.
+ *   Default: stdlib free.
+ *
  *  #define NGL_UNSTRIP_PREFIX: 
  *   Prepend "ngl_" to all functions, this is a Workaround as we don't 
  *   have Namespaces in C
@@ -142,6 +150,14 @@ typedef uint64_t u64;
 
 typedef double   f64;
 typedef float    f32;
+
+#ifndef NGL_MALLOC
+#define NGL_MALLOC(s) malloc(s)
+#endif /* NGL_MALLOC */
+
+#ifndef NGL_FREE
+#define NGL_FREE(p) free(p)
+#endif /* NGL_FREE */
 
 /* Most ngl Functions return this Type. */
 
@@ -486,17 +502,17 @@ ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
     u32 n = screen->w * screen->h;
 
     /* Allocate front Buffer. */
-    screen->current.colors = (ngl_color_t*)malloc(n * sizeof(ngl_color_t));
+    screen->current.colors = (ngl_color_t*)NGL_MALLOC(n * sizeof(ngl_color_t));
     if (!screen->current.colors) return ERR_FAILED_MALLOC;
 
-    screen->current.chars = (char*)malloc(n * sizeof(char));
+    screen->current.chars = (char*)NGL_MALLOC(n * sizeof(char));
     if (!screen->current.chars) return ERR_FAILED_MALLOC;
 
     /* Allocate back Buffer. */
-    screen->next.colors = (ngl_color_t*)malloc(n * sizeof(ngl_color_t));
+    screen->next.colors = (ngl_color_t*)NGL_MALLOC(n * sizeof(ngl_color_t));
     if (!screen->next.colors) return ERR_FAILED_MALLOC;
 
-    screen->next.chars = (char*)malloc(n * sizeof(char));
+    screen->next.chars = (char*)NGL_MALLOC(n * sizeof(char));
     if (!screen->next.chars) return ERR_FAILED_MALLOC;
 
     /* Zero-initialize both Buffers. */
@@ -521,17 +537,17 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
 
     /* Free front Buffer. */
     if (!screen->current.colors) return ERR_INVALID_PTR;
-    free(screen->current.colors);
+    NGL_FREE(screen->current.colors);
 
     if (!screen->current.chars) return ERR_INVALID_PTR;
-    free(screen->current.chars);
+    NGL_FREE(screen->current.chars);
 
     /* Free back Buffer. */
     if (!screen->next.colors) return ERR_INVALID_PTR;
-    free(screen->next.colors);
+    NGL_FREE(screen->next.colors);
 
     if (!screen->next.chars) return ERR_INVALID_PTR;
-    free(screen->next.chars);
+    NGL_FREE(screen->next.chars);
      
     *screen = (ngl_screen_t){0};
 
@@ -566,7 +582,7 @@ ngl_error_t ngl_print_screen(ngl_screen_t *screen) {
     u32 cap = worst_case_pixel * screen->w * screen->h;
 
     /* We draw into a temporary Buffer and write it all at once to STDOUT to reduce CPU Usage */
-    char *buf = (char *)malloc(cap * sizeof(char));
+    char *buf = (char *)NGL_MALLOC(cap * sizeof(char));
     if (!buf) return ERR_FAILED_MALLOC;
     u32 pos = 0;
 
@@ -597,7 +613,7 @@ ngl_error_t ngl_print_screen(ngl_screen_t *screen) {
 
     fwrite(buf, sizeof(char), pos, stdout);
     fflush(stdout);
-    free(buf);
+    NGL_FREE(buf);
 
     /* Swap buffers. */
     ngl_buf_t tmp = screen->current;
@@ -828,8 +844,9 @@ ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
     ctx->pfd.fd = fd;
     ctx->pfd.events = POLLIN;
 
-    memset(&ctx->key_states, 0, sizeof(ctx->key_states) / sizeof(ctx->key_states[0]));
-    struct termios newt;
+    memset(&ctx->key_states, 0, sizeof(ngl_key_state_t) * KEY_MAX + 1);
+
+    struct termios newt = {0};
 
     /* Get the current terminal Settings. */
     tcgetattr(STDIN_FILENO, &ctx->oldt);
@@ -1125,7 +1142,7 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
         return ERR_INVALID_SIZE;
     }
 
-    char *buf = (char*)malloc(((size_t)length + 1) * sizeof(char));
+    char *buf = (char*)NGL_MALLOC(((size_t)length + 1) * sizeof(char));
 
     if (!buf) {
         va_end(args);
@@ -1138,7 +1155,7 @@ ngl_error_t ngl_draw_text_fmt(ngl_screen_t *screen, ngl_font_t font, u32 x, u32 
 
     ngl_draw_text(screen, font, x, y, c, color, buf);
 
-    free(buf);
+    NGL_FREE(buf);
     return ERR_SUCCESS;
 }
 
