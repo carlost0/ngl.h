@@ -269,19 +269,22 @@ ngl_error_t ngl_get_term_size(u32 *w, u32 *h);
 
 ngl_error_t  ngl_init_screen(ngl_screen_t *screen);
 ngl_screen_t ngl_screen_new(u32 w, u32 h);
+
 ngl_error_t  ngl_destroy_screen(ngl_screen_t *screen);
 ngl_error_t  ngl_print_screen(ngl_screen_t *screen);
 
 ngl_error_t  ngl_clear_bg(ngl_screen_t *screen, char c, ngl_color_t color);
 
-ngl_error_t  ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color); 
-
 ngl_error_t  ngl_set_pixel(ngl_screen_t *screen, u32 x, u32 y, char c, ngl_color_t color);
 
+ngl_error_t  ngl_draw_screen_borders(ngl_screen_t *screen, char c, ngl_color_t color); 
+
 ngl_error_t  ngl_draw_rect(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
+
 /* Draw a string with w*h dimensions. */
 /* NOTE: The String must be at least w*h Bytes long, else there would be a Buffer overflow. */ 
 ngl_error_t  ngl_draw_sprite(ngl_screen_t *screen, u32 x, u32 y, u32 w, u32 h, char *sprite, ngl_color_t color);
+
 ngl_error_t  ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
 
 
@@ -296,8 +299,6 @@ ngl_error_t  ngl_draw_line(ngl_screen_t *screen, u32 start_x, u32 start_y, u32 e
  *
  */
 
-
-
 typedef enum {
     KSTATE_UP       = 0,
     KSTATE_DOWN     = 1,
@@ -306,8 +307,10 @@ typedef enum {
 } ngl_key_state_t;
 
 typedef struct {
+#ifndef __WIN32
     struct pollfd   pfd;
     struct termios  oldt;
+#endif /* __WIN32 */
     ngl_key_state_t key_states[KEY_MAX + 1];
     ngl_key_state_t old_key_states[KEY_MAX + 1];
     ngl_error_t     status;

@@ -2,8 +2,14 @@
 > This is a continuation to [aschii](https://github.com/carlost0/aschii).
 
 # ngl.h
+
 Not a Graphics Library is a stb-style single Header Graphics Library for your Terminal written with ISO C99.
 ngl.h only has around 800 lines of actual code, 400 semicolons and 100 open curly braces.
+
+---
+
+# TODO
+- Add windows support (maybe).
 
 # Usage
 Download ngl.h into your Project's directory: `wget https://github.com/carlost0/ngl.h/releases/download/v0.1.0/ngl.h`,
