@@ -47,7 +47,7 @@
  *   Disable the math Module.
  *
  *  #define NGL_SERIOUS_ERRORS:
- *   Removes the ":("/":)" at the end of Error messages.
+ *   Removes the ":(" / ":)" at the end of Error messages.
  *
  *  #define NGL_MATHDEF:
  *   Set the way Functions should be defined in the math Module.
@@ -142,9 +142,9 @@
 #define NGL_VERSION_MINOR 1
 #define NGL_VERSION_PATCH 0
 
-#define NGL_IS_RELEASE 1
+#define NGL_IS_RELEASE 0
 
-#define NGL_VERSION_STR "0.1.0-release"
+#define NGL_VERSION_STR "0.1.0-dev"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -1308,6 +1308,15 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle) {
 #ifndef _NGL_PREFIX
 #define _NGL_PREFIX
 #ifndef NGL_UNSTRIP_PREFIX
+
+#define WHITE                  NGL_WHITE
+#define BLACK                  NGL_BLACK
+#define RED                    NGL_RED
+#define GREEN                  NGL_GREEN
+#define YELLOW                 NGL_YELLOW
+#define BLUE                   NGL_BLUE
+#define MAGENTA                NGL_MAGENTA
+#define CYAN                   NGL_CYAN
 
 #define error_to_string        ngl_error_to_string
 #define idx                    ngl_idx
