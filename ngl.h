@@ -287,7 +287,7 @@ typedef struct {
 ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
 
-print_screen(ngl_t *api);
+ngl_error_t print_screen(ngl_t *api);
 
 ngl_error_t  ngl_fill_bg(ngl_t *api, char c, ngl_color_t color);
 
