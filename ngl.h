@@ -19,7 +19,7 @@
 
 /* 
  * ngl.h: not a graphics library is a stb-style single-header
- * Graphics Library for the Console written in C.
+ * Graphics Library for the Console on Linux written in C.
  *
  * compilation:
  *  Link with the mathematical Library (-lm) if NGL_NO_MATH isn't set.
@@ -65,38 +65,57 @@
 #ifndef _NGL_H
 #define _NGL_H
 
+#if !defined(__linux__) && !defined(NGL_NO_INPUT)
+# ifdef NGL_SERIOUS_ERRORS
+#  error "ngl input Module currently only works on linux."
+# else
+#  error "ngl input Module currently only works on linux :(."
+# endif /* NGL_SERIOUS_ERRORS */
+#endif /* __linux__ */
+
 #undef _GNU_SOURCE
 #define _GNU_SOURCE
 #undef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-
 #include <string.h>
 
 #include <time.h>
 
+#include <sys/select.h>
+#include <sys/ioctl.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
 /* Input Dependencies. */
 #ifndef NGL_NO_INPUT
 
-
-#include <fcntl.h>
 #include <linux/input.h>
+
 #include <stdbool.h>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
+
+#include <termios.h>
 #include <errno.h>
 #include <poll.h>
-#include <termios.h>
 
 #endif /* NGL_NO_INPUT */
 
+/* Font Dependencies. */
+#ifndef NGL_NO_FONTS
+
+#include <stdarg.h>
+
+#endif /* NGL_NO_FONTS */
+
 /* Math Dependencies. */
 #ifndef NGL_NO_MATH
+
 #include <math.h>
+
 #endif /* NGL_NO_MATH */
 
 /* ngl.h Version. */
@@ -213,7 +232,7 @@ typedef struct {
 #ifndef NGL_NO_FONTS
 
 typedef struct {
-    u32 w, h;
+    u8 w, h;
     u8  hpad, vpad;
     const u32 *glyphs;
 } ngl_font_t;
@@ -268,60 +287,7 @@ typedef struct {
 ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
 
-void ngl_destroy(ngl_t *api);
-
-/* Get an Error string out of an Error Code. */
-const char *ngl_error_to_string(ngl_error_t error);
-
-/* Default colors. */
-#ifndef NGL_BLACK
-#define NGL_BLACK ngl_color(0,0,0)
-#endif /* NGL_BLACK */
-
-#ifndef NGL_WHITE
-#define NGL_WHITE ngl_color(255,255,255)
-#endif /* NGL_WHITE */
-
-#ifndef NGL_RED
-#define NGL_RED ngl_color(255,0,0)
-#endif /* NGL_RED */
-
-#ifndef NGL_GREEN
-#define NGL_GREEN ngl_color(0,255,0)
-#endif /* NGL_GREEN */
-
-#ifndef NGL_YELLOW
-#define NGL_YELLOW ngl_color(255,255,0)
-#endif /* NGL_YELLOW */
-
-#ifndef NGL_BLUE
-#define NGL_BLUE ngl_color(0,0,255)
-#endif /* NGL_BLUE */
-
-#ifndef NGL_MAGENTA
-#define NGL_MAGENTA ngl_color(255,0,255)
-#endif /* NGL_MAGENTA */
-
-#ifndef NGL_CYAN
-#define NGL_CYAN ngl_color(0,255,255)
-#endif /* NGL_CYAN */
-
-
-/* Convert a 2d Coordinate into a 1d Index. */
-#define ngl_idx(x, y, w) ((y) * (w) + (x))
-
-void ngl_delay(u32 ms);
-u64  ngl_get_ms(void);
-void ngl_clear_screen(void);
-
-ngl_error_t ngl_get_term_size(u32 *w, u32 *h);
-
-ngl_error_t  ngl_init_screen(ngl_screen_t *screen);
-ngl_screen_t ngl_screen_new(u32 w, u32 h);
-
-ngl_error_t  ngl_destroy_screen(ngl_screen_t *screen);
-
-ngl_error_t  ngl_print_screen(ngl_t *api);
+print_screen(ngl_t *api);
 
 ngl_error_t  ngl_fill_bg(ngl_t *api, char c, ngl_color_t color);
 
@@ -353,21 +319,23 @@ ngl_input_ctx_t ngl_input_new(void);
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
 ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
 
+/* This function should only be called once per Frame. */
 ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key);
+
 ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 
 
 #ifndef ngl_is_key_down
-#define ngl_is_key_down(ctx, key)           (ngl_get_key_state(ctx, key) > 0 && ngl_get_key_state(ctx, key) < 3)
+#define ngl_is_key_down(api, key)           (ngl_get_key_state(api, key) > 0 && ngl_get_key_state(api, key) < 3)
 #endif /* is_key_down */
 
 
 #ifndef  ngl_is_key_pressed_repeat
-#define ngl_is_key_pressed_repeat(ctx, key) (ngl_get_key_state(ctx, key) == KSTATE_REPEAT)
+#define ngl_is_key_pressed_repeat(api, key) (ngl_get_key_state(api, key) == KSTATE_REPEAT)
 #endif /* is_key_pressed_repeat */
 
 #ifndef ngl_is_key_released
-#define ngl_is_key_released(ctx, key)       (ngl_get_key_state(ctx, key) == KSTATE_RELEASED)
+#define ngl_is_key_released(api, key)       (ngl_get_key_state(api, key) == KSTATE_RELEASED)
 #endif /* is_key_down */
 
 
@@ -616,7 +584,7 @@ const char *ngl_error_to_string(ngl_error_t error) {
         case ERR_INVALID_SIZE:
             return "Invalid size. :(";
         case ERR_FAILED_MALLOC:
-            return "Failed malloc. :(";
+            return "Failed malloc. (buy more ram lol)";
         case ERR_FAILED_FILE_READ:
             return "Failed to read file. :(";
         case ERR_FAILED_FILE_OPEN:
@@ -628,7 +596,6 @@ const char *ngl_error_to_string(ngl_error_t error) {
     }
 }
 #endif /* NGL_SERIOUS_ERRORS */
-#include <sys/select.h>
 
 void ngl_delay(u32 ms) {
     struct timeval tv;
@@ -643,17 +610,13 @@ u64 ngl_get_ms(void) {
     return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-
 /* Function originaly written by Glenn Chappell & Ian Chai 14 Apr 1993 */
 ngl_error_t ngl_get_term_size(u32 *w, u32 *h) {
     if (!(w && h)) return ERR_INVALID_PTR;
     struct winsize ws;
     int fd,result;
 
-    if ((fd = open("/dev/tty",O_WRONLY))<0) return ERR_FAILED_FILE_OPEN;
+    if ((fd = open("/dev/tty",O_RDONLY))<0) return ERR_FAILED_FILE_OPEN;
 
     result = ioctl(fd,TIOCGWINSZ,&ws);
     close(fd);
@@ -671,17 +634,11 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
     ngl_error_t err = ERR_SUCCESS;
     /* Free front Buffer. */
     if (screen->current.colors) NGL_FREE(screen->current.colors);
-    else err = ERR_INVALID_PTR;
-
     if (screen->current.chars) NGL_FREE(screen->current.chars);
-    else err = ERR_INVALID_PTR;
 
     /* Free back Buffer. */
     if (screen->next.colors) NGL_FREE(screen->next.colors);
-    else err = ERR_INVALID_PTR;
-
     if (screen->next.chars) NGL_FREE(screen->next.chars);
-    else err = ERR_INVALID_PTR;
      
     *screen = (ngl_screen_t){0};
 
@@ -715,8 +672,8 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
     /* The length of "\x1b[38;2;255;255;255mC". */
-    u32 worst_case_pixel = 23;
-    u32 cap = worst_case_pixel * screen->w * screen->h;
+    u32 worst_case_pixel_size = 23;
+    u32 cap = worst_case_pixel_size * screen->w * screen->h;
 
     /*
      * We draw into a temporary Buffer and write it all
@@ -733,7 +690,10 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
     u32 x, y;
     for (y = 0; y < screen->h; ++y) {
         for (x = 0; x < screen->w; ++x) {
-            if (pos + 24 >= cap) break;
+            if (pos + 24 >= cap) {
+                NGL_FREE(buf);
+                return ERR_INVALID_SIZE;
+            }
 
             /* current index, character and color */
             u32 i = ngl_idx(x, y, screen->w);
@@ -776,9 +736,9 @@ ngl_error_t ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color) {
     u32 w = screen->w;
     u32 h = screen->h;
 
-    char cchar = c;
-
-    if (!c) cchar = '-';
+    char hchar = c ? c : '-';
+    char vchar = c ? c : '|';
+    char corner = c ? c : '+';
 
     /* Draw top and bottom lines at the same Time */
     u32 x;
@@ -786,13 +746,11 @@ ngl_error_t ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color) {
         u32 i = ngl_idx(x, 0, w);
         u32 j = ngl_idx(x, h-1, w);
 
-        screen->next.chars[i] = cchar;
-        screen->next.chars[j] = cchar;
+        screen->next.chars[i] = hchar;
+        screen->next.chars[j] = hchar;
         screen->next.colors[i] = color;
         screen->next.colors[j] = color;
     }
-
-    if (!c) cchar = '|';
 
     /* Draw right and left lines at the same Time */
     u32 y;
@@ -800,8 +758,8 @@ ngl_error_t ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color) {
         u32 i = ngl_idx(0, y, w);
         u32 j = ngl_idx(w-1, y, w);
 
-        screen->next.chars[i] = cchar;
-        screen->next.chars[j] = cchar;
+        screen->next.chars[i] = vchar;
+        screen->next.chars[j] = vchar;
 
         screen->next.colors[i] = color;
         screen->next.colors[j] = color;
@@ -809,21 +767,20 @@ ngl_error_t ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color) {
 
     /* Place the Corners. */
 
-    if (!c) cchar = '+';
     /* Top left Corner. */
-    screen->next.chars[0]  = cchar;
+    screen->next.chars[0]  = corner;
     screen->next.colors[0] = color;
 
     /* Top right Corner. */
-    screen->next.chars[w-1]  = cchar;
+    screen->next.chars[w-1]  = corner;
     screen->next.colors[w-1] = color;
 
     /* Bottom left Corner. */
-    screen->next.chars[ngl_idx(0, h-1, w)] = cchar;
+    screen->next.chars[ngl_idx(0, h-1, w)] = corner;
     screen->next.colors[ngl_idx(0, h-1, w)] = color;
 
     /* Bottom right Corner. */
-    screen->next.chars[ngl_idx(w-1, h-1, w)] = cchar;
+    screen->next.chars[ngl_idx(w-1, h-1, w)] = corner;
     screen->next.colors[ngl_idx(w-1, h-1, w)] = color;
     return ERR_SUCCESS;
 }
@@ -898,7 +855,7 @@ ngl_error_t ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 e
 
     i32 err = dx - dy;
 
-    while (true) {
+    while (1) {
         u32 i = ngl_idx((u32)x0, (u32)y0, screen->w);
         screen->next.chars[i] = c;
         screen->next.colors[i] = color;
@@ -941,15 +898,15 @@ ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key) {
 
 static inline bool _ngl_test_bit(const u64 *bits, i32 bit) {
     return bits[bit / (sizeof(u64) * 8)] &
-           (1UL << (bit % (sizeof(u64) * 8)));
+           (1ULL << (bit % (sizeof(u64) * 8)));
 }
 
 static bool _ngl_is_keyboard(i32 fd) {
-    unsigned long ev_bits[(EV_MAX + 1 +
+    u64 ev_bits[(EV_MAX + 1 +
                             sizeof(unsigned long) * 8 - 1) /
                            (sizeof(unsigned long) * 8)] = {0};
 
-    unsigned long key_bits[(KEY_MAX + 1 +
+    u64 key_bits[(KEY_MAX + 1 +
                              sizeof(unsigned long) * 8 - 1) /
                             (sizeof(unsigned long) * 8)] = {0};
 
@@ -970,7 +927,7 @@ static bool _ngl_is_keyboard(i32 fd) {
 static i32 _ngl_find_keyboard(void) {
     char path[64];
     u32 i;
-    for (i = 0; i < 16; ++i) {
+    for (i = 0; i < 32; ++i) {
         snprintf(path, sizeof(path), "/dev/input/event%d", i);
 
         int fd = open(path, O_RDONLY | O_NONBLOCK);
@@ -997,11 +954,10 @@ ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
 
     memset(&ctx->key_states, 0, sizeof(ngl_key_state_t) * (KEY_MAX + 1));
 
-    struct termios newt = {0};
 
     /* Get the current terminal Settings. */
     tcgetattr(STDIN_FILENO, &ctx->oldt);
-    newt = ctx->oldt;
+    struct termios newt = ctx->oldt;
 
     /* Disable echo .*/
     newt.c_lflag &= ~ECHO;
@@ -1018,13 +974,15 @@ ngl_input_ctx_t ngl_input_new(void) {
 
 ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
     if (!ctx) return ERR_INVALID_PTR;
-    if (close(ctx->pfd.fd) < 0) return ERR_FAILED_FILE_CLOSE;
 
     tcsetattr(STDIN_FILENO, TCSANOW, &ctx->oldt);
+
+    if (close(ctx->pfd.fd) < 0) return ERR_FAILED_FILE_CLOSE;
 
     return ERR_SUCCESS;
 }
 
+/* This Function is intended to only be called once per Frame. */
 ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
     ngl_input_ctx_t *ctx = &api->input;
     struct pollfd *fd = &ctx->pfd;
@@ -1041,7 +999,7 @@ ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
     memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states));
 
     if (fd->revents & POLLIN) {
-        struct input_event events[KEY_MAX + 1];
+        struct input_event events[64];
 
         ssize_t bytes = read(fd->fd, events, sizeof(events));
 
@@ -1078,20 +1036,20 @@ ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
 
 #ifndef NGL_NO_FONTS
 
-#ifndef NGL_GLYPH
-#define NGL_GLYPH(a, b, c, d, e) \
+#ifndef _NGL_GLYPH
+#define _NGL_GLYPH(a, b, c, d, e) \
     ((u32)(a)        |       \
     ((u32)(b) << 5)  |       \
     ((u32)(c) << 10) |       \
     ((u32)(d) << 15) |       \
     ((u32)(e) << 20))
-#endif /* NGL_GLYPH */
+#endif /* _NGL_GLYPH */
 
 
-#define NGL_DEFAULT_GLYPH_W (5)
-#define NGL_DEFAULT_GLYPH_H (5)
-#define NGL_DEFAULT_GLYPH_VPAD (1)
-#define NGL_DEFAULT_GLYPH_HPAD (1)
+#define _NGL_DEFAULT_GLYPH_W (5)
+#define _NGL_DEFAULT_GLYPH_H (5)
+#define _NGL_DEFAULT_GLYPH_VPAD (1)
+#define _NGL_DEFAULT_GLYPH_HPAD (1)
 
 /* 
  * This font is made with nglfontbuilder.c, found in extra/.
@@ -1101,118 +1059,118 @@ ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
  *  - The Glyphs must be ordered the same way as they appear in the ASCII table.
  */
 
-static const u32 NGL_DEFAULT_GLYPHS[] = {
-    /* ! */ NGL_GLYPH(0x01,0x01,0x01,0x00,0x01),
-    /* " */ NGL_GLYPH(0x05,0x05,0x00,0x00,0x00),
-    /* # */ NGL_GLYPH(0x0A,0x1F,0x0A,0x1F,0x0A),
-    /* $ */ NGL_GLYPH(0x0E,0x05,0x0E,0x14,0x0E),
-    /* % */ NGL_GLYPH(0x11,0x08,0x04,0x02,0x11),
-    /* & */ NGL_GLYPH(0x06,0x05,0x16,0x09,0x16),
-    /* ' */ NGL_GLYPH(0x01,0x01,0x00,0x00,0x00),
-    /* ( */ NGL_GLYPH(0x02,0x01,0x01,0x01,0x02),
-    /* ) */ NGL_GLYPH(0x01,0x02,0x02,0x02,0x01),
-    /* * */ NGL_GLYPH(0x04,0x0E,0x04,0x00,0x00),
-    /* + */ NGL_GLYPH(0x00,0x04,0x0E,0x04,0x00),
-    /* , */ NGL_GLYPH(0x00,0x00,0x00,0x00,0x03),
-    /* - */ NGL_GLYPH(0x00,0x00,0x0E,0x00,0x00),
-    /* . */ NGL_GLYPH(0x00,0x00,0x00,0x00,0x01),
-    /* / */ NGL_GLYPH(0x10,0x08,0x04,0x02,0x01),
+static const u32 _NGL_DEFAULT_GLYPHS[] = {
+    /* ! */ _NGL_GLYPH(0x01,0x01,0x01,0x00,0x01),
+    /* " */ _NGL_GLYPH(0x05,0x05,0x00,0x00,0x00),
+    /* # */ _NGL_GLYPH(0x0A,0x1F,0x0A,0x1F,0x0A),
+    /* $ */ _NGL_GLYPH(0x0E,0x05,0x0E,0x14,0x0E),
+    /* % */ _NGL_GLYPH(0x11,0x08,0x04,0x02,0x11),
+    /* & */ _NGL_GLYPH(0x06,0x05,0x16,0x09,0x16),
+    /* ' */ _NGL_GLYPH(0x01,0x01,0x00,0x00,0x00),
+    /* ( */ _NGL_GLYPH(0x02,0x01,0x01,0x01,0x02),
+    /* ) */ _NGL_GLYPH(0x01,0x02,0x02,0x02,0x01),
+    /* * */ _NGL_GLYPH(0x04,0x0E,0x04,0x00,0x00),
+    /* + */ _NGL_GLYPH(0x00,0x04,0x0E,0x04,0x00),
+    /* , */ _NGL_GLYPH(0x00,0x00,0x00,0x00,0x03),
+    /* - */ _NGL_GLYPH(0x00,0x00,0x0E,0x00,0x00),
+    /* . */ _NGL_GLYPH(0x00,0x00,0x00,0x00,0x01),
+    /* / */ _NGL_GLYPH(0x10,0x08,0x04,0x02,0x01),
 
-    /* 0 */ NGL_GLYPH(0x07,0x05,0x05,0x05,0x07),
-    /* 1 */ NGL_GLYPH(0x04,0x06,0x04,0x04,0x04),
-    /* 2 */ NGL_GLYPH(0x07,0x04,0x07,0x01,0x07),
-    /* 3 */ NGL_GLYPH(0x07,0x04,0x06,0x04,0x07),
-    /* 4 */ NGL_GLYPH(0x05,0x05,0x07,0x04,0x04),
-    /* 5 */ NGL_GLYPH(0x07,0x01,0x07,0x04,0x07),
-    /* 6 */ NGL_GLYPH(0x07,0x01,0x07,0x05,0x07),
-    /* 7 */ NGL_GLYPH(0x07,0x05,0x04,0x04,0x04),
-    /* 8 */ NGL_GLYPH(0x07,0x05,0x07,0x05,0x07),
-    /* 9 */ NGL_GLYPH(0x07,0x05,0x07,0x04,0x07),
+    /* 0 */ _NGL_GLYPH(0x07,0x05,0x05,0x05,0x07),
+    /* 1 */ _NGL_GLYPH(0x04,0x06,0x04,0x04,0x04),
+    /* 2 */ _NGL_GLYPH(0x07,0x04,0x07,0x01,0x07),
+    /* 3 */ _NGL_GLYPH(0x07,0x04,0x06,0x04,0x07),
+    /* 4 */ _NGL_GLYPH(0x05,0x05,0x07,0x04,0x04),
+    /* 5 */ _NGL_GLYPH(0x07,0x01,0x07,0x04,0x07),
+    /* 6 */ _NGL_GLYPH(0x07,0x01,0x07,0x05,0x07),
+    /* 7 */ _NGL_GLYPH(0x07,0x05,0x04,0x04,0x04),
+    /* 8 */ _NGL_GLYPH(0x07,0x05,0x07,0x05,0x07),
+    /* 9 */ _NGL_GLYPH(0x07,0x05,0x07,0x04,0x07),
 
-    /* : */ NGL_GLYPH(0x00,0x00,0x01,0x00,0x01),
-    /* ; */ NGL_GLYPH(0x00,0x00,0x02,0x00,0x03),
-    /* < */ NGL_GLYPH(0x00,0x0C,0x02,0x0C,0x00),
-    /* = */ NGL_GLYPH(0x00,0x0E,0x00,0x0E,0x00),
-    /* > */ NGL_GLYPH(0x00,0x06,0x08,0x06,0x00),
-    /* ? */ NGL_GLYPH(0x0E,0x08,0x0C,0x00,0x04),
-    /* @ */ NGL_GLYPH(0x1F,0x11,0x1D,0x01,0x1F),
+    /* : */ _NGL_GLYPH(0x00,0x00,0x01,0x00,0x01),
+    /* ; */ _NGL_GLYPH(0x00,0x00,0x02,0x00,0x03),
+    /* < */ _NGL_GLYPH(0x00,0x0C,0x02,0x0C,0x00),
+    /* = */ _NGL_GLYPH(0x00,0x0E,0x00,0x0E,0x00),
+    /* > */ _NGL_GLYPH(0x00,0x06,0x08,0x06,0x00),
+    /* ? */ _NGL_GLYPH(0x0E,0x08,0x0C,0x00,0x04),
+    /* @ */ _NGL_GLYPH(0x1F,0x11,0x1D,0x01,0x1F),
 
-    /* A */ NGL_GLYPH(0x0E,0x11,0x11,0x1F,0x11),
-    /* B */ NGL_GLYPH(0x0F,0x11,0x0F,0x11,0x0F),
-    /* C */ NGL_GLYPH(0x1F,0x01,0x01,0x01,0x1F),
-    /* D */ NGL_GLYPH(0x0F,0x11,0x11,0x11,0x0F),
-    /* E */ NGL_GLYPH(0x1F,0x01,0x0F,0x01,0x1F),
-    /* F */ NGL_GLYPH(0x1F,0x01,0x0F,0x01,0x01),
-    /* G */ NGL_GLYPH(0x1F,0x01,0x1D,0x11,0x1F),
-    /* H */ NGL_GLYPH(0x11,0x11,0x1F,0x11,0x11),
-    /* I */ NGL_GLYPH(0x07,0x02,0x02,0x02,0x07),
-    /* J */ NGL_GLYPH(0x1F,0x10,0x10,0x10,0x0F),
-    /* K */ NGL_GLYPH(0x11,0x09,0x07,0x09,0x11),
-    /* L */ NGL_GLYPH(0x01,0x01,0x01,0x01,0x1F),
-    /* M */ NGL_GLYPH(0x0A,0x15,0x15,0x15,0x11),
-    /* N */ NGL_GLYPH(0x11,0x13,0x15,0x19,0x11),
-    /* O */ NGL_GLYPH(0x1F,0x11,0x11,0x11,0x1F),
-    /* P */ NGL_GLYPH(0x1F,0x11,0x1F,0x01,0x01),
-    /* Q */ NGL_GLYPH(0x1F,0x11,0x11,0x09,0x17),
-    /* R */ NGL_GLYPH(0x1F,0x11,0x1F,0x09,0x11),
-    /* S */ NGL_GLYPH(0x1F,0x01,0x1F,0x10,0x1F),
-    /* T */ NGL_GLYPH(0x1F,0x04,0x04,0x04,0x04),
-    /* U */ NGL_GLYPH(0x11,0x11,0x11,0x11,0x1F),
-    /* V */ NGL_GLYPH(0x11,0x11,0x11,0x0A,0x04),
-    /* W */ NGL_GLYPH(0x11,0x11,0x15,0x15,0x0A),
-    /* X */ NGL_GLYPH(0x11,0x0A,0x04,0x0A,0x11),
-    /* Y */ NGL_GLYPH(0x11,0x0A,0x04,0x04,0x04),
-    /* Z */ NGL_GLYPH(0x1F,0x08,0x04,0x02,0x1F),
+    /* A */ _NGL_GLYPH(0x0E,0x11,0x11,0x1F,0x11),
+    /* B */ _NGL_GLYPH(0x0F,0x11,0x0F,0x11,0x0F),
+    /* C */ _NGL_GLYPH(0x1F,0x01,0x01,0x01,0x1F),
+    /* D */ _NGL_GLYPH(0x0F,0x11,0x11,0x11,0x0F),
+    /* E */ _NGL_GLYPH(0x1F,0x01,0x0F,0x01,0x1F),
+    /* F */ _NGL_GLYPH(0x1F,0x01,0x0F,0x01,0x01),
+    /* G */ _NGL_GLYPH(0x1F,0x01,0x1D,0x11,0x1F),
+    /* H */ _NGL_GLYPH(0x11,0x11,0x1F,0x11,0x11),
+    /* I */ _NGL_GLYPH(0x07,0x02,0x02,0x02,0x07),
+    /* J */ _NGL_GLYPH(0x1F,0x10,0x10,0x10,0x0F),
+    /* K */ _NGL_GLYPH(0x11,0x09,0x07,0x09,0x11),
+    /* L */ _NGL_GLYPH(0x01,0x01,0x01,0x01,0x1F),
+    /* M */ _NGL_GLYPH(0x0A,0x15,0x15,0x15,0x11),
+    /* N */ _NGL_GLYPH(0x11,0x13,0x15,0x19,0x11),
+    /* O */ _NGL_GLYPH(0x1F,0x11,0x11,0x11,0x1F),
+    /* P */ _NGL_GLYPH(0x1F,0x11,0x1F,0x01,0x01),
+    /* Q */ _NGL_GLYPH(0x1F,0x11,0x11,0x09,0x17),
+    /* R */ _NGL_GLYPH(0x1F,0x11,0x1F,0x09,0x11),
+    /* S */ _NGL_GLYPH(0x1F,0x01,0x1F,0x10,0x1F),
+    /* T */ _NGL_GLYPH(0x1F,0x04,0x04,0x04,0x04),
+    /* U */ _NGL_GLYPH(0x11,0x11,0x11,0x11,0x1F),
+    /* V */ _NGL_GLYPH(0x11,0x11,0x11,0x0A,0x04),
+    /* W */ _NGL_GLYPH(0x11,0x11,0x15,0x15,0x0A),
+    /* X */ _NGL_GLYPH(0x11,0x0A,0x04,0x0A,0x11),
+    /* Y */ _NGL_GLYPH(0x11,0x0A,0x04,0x04,0x04),
+    /* Z */ _NGL_GLYPH(0x1F,0x08,0x04,0x02,0x1F),
 
-    /* [ */ NGL_GLYPH(0x03,0x01,0x01,0x01,0x03),
-    /* \ */ NGL_GLYPH(0x03,0x02,0x02,0x02,0x03),
-    /* ] */ NGL_GLYPH(0x01,0x02,0x04,0x08,0x10),
-    /* ^ */ NGL_GLYPH(0x04,0x0A,0x00,0x00,0x00),
-    /* _ */ NGL_GLYPH(0x00,0x00,0x00,0x00,0x1F),
-    /* ` */ NGL_GLYPH(0x02,0x04,0x00,0x00,0x00),
+    /* [ */ _NGL_GLYPH(0x03,0x01,0x01,0x01,0x03),
+    /* \ */ _NGL_GLYPH(0x01,0x02,0x04,0x08,0x10),
+    /* ] */ _NGL_GLYPH(0x03,0x02,0x02,0x02,0x03),
+    /* ^ */ _NGL_GLYPH(0x04,0x0A,0x00,0x00,0x00),
+    /* _ */ _NGL_GLYPH(0x00,0x00,0x00,0x00,0x1F),
+    /* ` */ _NGL_GLYPH(0x02,0x04,0x00,0x00,0x00),
 
-    /* a */ NGL_GLYPH(0x00,0x00,0x07,0x05,0x0F),
-    /* b */ NGL_GLYPH(0x01,0x01,0x07,0x05,0x07),
-    /* c */ NGL_GLYPH(0x00,0x00,0x07,0x01,0x07),
-    /* d */ NGL_GLYPH(0x04,0x04,0x07,0x05,0x07),
-    /* e */ NGL_GLYPH(0x00,0x00,0x07,0x03,0x07),
-    /* f */ NGL_GLYPH(0x03,0x01,0x03,0x01,0x01),
-    /* g */ NGL_GLYPH(0x00,0x00,0x03,0x02,0x03),
-    /* h */ NGL_GLYPH(0x01,0x01,0x07,0x05,0x05),
-    /* i */ NGL_GLYPH(0x01,0x00,0x01,0x01,0x03),
-    /* j */ NGL_GLYPH(0x02,0x00,0x02,0x02,0x03),
-    /* k */ NGL_GLYPH(0x01,0x01,0x05,0x03,0x05),
-    /* l */ NGL_GLYPH(0x01,0x01,0x01,0x01,0x03),
-    /* m */ NGL_GLYPH(0x00,0x00,0x0F,0x15,0x15),
-    /* n */ NGL_GLYPH(0x00,0x00,0x03,0x05,0x05),
-    /* o */ NGL_GLYPH(0x00,0x00,0x07,0x05,0x07),
-    /* p */ NGL_GLYPH(0x00,0x00,0x03,0x03,0x01),
-    /* q */ NGL_GLYPH(0x00,0x00,0x03,0x03,0x02),
-    /* r */ NGL_GLYPH(0x00,0x00,0x07,0x01,0x01),
-    /* s */ NGL_GLYPH(0x00,0x00,0x06,0x02,0x03),
-    /* t */ NGL_GLYPH(0x00,0x02,0x07,0x02,0x06),
-    /* u */ NGL_GLYPH(0x00,0x00,0x05,0x05,0x07),
-    /* v */ NGL_GLYPH(0x00,0x00,0x05,0x05,0x02),
-    /* w */ NGL_GLYPH(0x00,0x00,0x15,0x15,0x0A),
-    /* x */ NGL_GLYPH(0x00,0x00,0x05,0x02,0x05),
-    /* y */ NGL_GLYPH(0x00,0x00,0x05,0x02,0x01),
-    /* z */ NGL_GLYPH(0x00,0x00,0x07,0x02,0x07),
+    /* a */ _NGL_GLYPH(0x00,0x00,0x07,0x05,0x0F),
+    /* b */ _NGL_GLYPH(0x01,0x01,0x07,0x05,0x07),
+    /* c */ _NGL_GLYPH(0x00,0x00,0x07,0x01,0x07),
+    /* d */ _NGL_GLYPH(0x04,0x04,0x07,0x05,0x07),
+    /* e */ _NGL_GLYPH(0x00,0x00,0x07,0x03,0x07),
+    /* f */ _NGL_GLYPH(0x03,0x01,0x03,0x01,0x01),
+    /* g */ _NGL_GLYPH(0x00,0x00,0x03,0x02,0x03),
+    /* h */ _NGL_GLYPH(0x01,0x01,0x07,0x05,0x05),
+    /* i */ _NGL_GLYPH(0x01,0x00,0x01,0x01,0x03),
+    /* j */ _NGL_GLYPH(0x02,0x00,0x02,0x02,0x03),
+    /* k */ _NGL_GLYPH(0x01,0x01,0x05,0x03,0x05),
+    /* l */ _NGL_GLYPH(0x01,0x01,0x01,0x01,0x03),
+    /* m */ _NGL_GLYPH(0x00,0x00,0x0F,0x15,0x15),
+    /* n */ _NGL_GLYPH(0x00,0x00,0x03,0x05,0x05),
+    /* o */ _NGL_GLYPH(0x00,0x00,0x07,0x05,0x07),
+    /* p */ _NGL_GLYPH(0x00,0x00,0x03,0x03,0x01),
+    /* q */ _NGL_GLYPH(0x00,0x00,0x03,0x03,0x02),
+    /* r */ _NGL_GLYPH(0x00,0x00,0x07,0x01,0x01),
+    /* s */ _NGL_GLYPH(0x00,0x00,0x06,0x02,0x03),
+    /* t */ _NGL_GLYPH(0x00,0x02,0x07,0x02,0x06),
+    /* u */ _NGL_GLYPH(0x00,0x00,0x05,0x05,0x07),
+    /* v */ _NGL_GLYPH(0x00,0x00,0x05,0x05,0x02),
+    /* w */ _NGL_GLYPH(0x00,0x00,0x15,0x15,0x0A),
+    /* x */ _NGL_GLYPH(0x00,0x00,0x05,0x02,0x05),
+    /* y */ _NGL_GLYPH(0x00,0x00,0x05,0x02,0x01),
+    /* z */ _NGL_GLYPH(0x00,0x00,0x07,0x02,0x07),
 
-    /* { */ NGL_GLYPH(0x06,0x02,0x01,0x02,0x06),
-    /* | */ NGL_GLYPH(0x04,0x04,0x04,0x04,0x04),
-    /* } */ NGL_GLYPH(0x03,0x02,0x04,0x02,0x03),
-    /* ~ */ NGL_GLYPH(0x00,0x02,0x15,0x08,0x00),
+    /* { */ _NGL_GLYPH(0x06,0x02,0x01,0x02,0x06),
+    /* | */ _NGL_GLYPH(0x04,0x04,0x04,0x04,0x04),
+    /* } */ _NGL_GLYPH(0x03,0x02,0x04,0x02,0x03),
+    /* ~ */ _NGL_GLYPH(0x00,0x02,0x15,0x08,0x00),
 };
 
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
     if (!font) return ERR_INVALID_PTR;
 
-    if (font->w == 0) font->w = NGL_DEFAULT_GLYPH_W;
-    if (font->h == 0) font->h = NGL_DEFAULT_GLYPH_H;
-    if (font->hpad == 0) font->hpad = NGL_DEFAULT_GLYPH_HPAD;
-    if (font->vpad == 0) font->vpad = NGL_DEFAULT_GLYPH_HPAD;
+    if (font->w == 0 || font->w > 5) font->w = _NGL_DEFAULT_GLYPH_W;
+    if (font->h == 0 || font->h > 5) font->h = _NGL_DEFAULT_GLYPH_H;
+    if (font->hpad == 0) font->hpad = _NGL_DEFAULT_GLYPH_HPAD;
+    if (font->vpad == 0) font->vpad = _NGL_DEFAULT_GLYPH_VPAD;
 
-    if (glyphs == NULL) font->glyphs = NGL_DEFAULT_GLYPHS;
+    if (glyphs == NULL) font->glyphs = _NGL_DEFAULT_GLYPHS;
     else                font->glyphs = glyphs;
 
 
@@ -1288,6 +1246,10 @@ ngl_error_t ngl_draw_text(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, c
                 cx = x;
                 cy += font.h + font.vpad;
             }
+
+            if (cy + font.h > screen->h) {
+                break;
+            }
         }
 
 
@@ -1296,7 +1258,6 @@ ngl_error_t ngl_draw_text(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, c
     return err;
 }
 
-#include <stdarg.h>
 ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -1319,7 +1280,11 @@ ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t colo
         return ERR_FAILED_MALLOC;
     }
 
-    vsnprintf(buf, (size_t)length + 1, format, args);
+    if (vsnprintf(buf, (size_t)length + 1, format, args) < 0) {
+        NGL_FREE(buf);
+        va_end(args);
+        return ERR_INVALID_SIZE;
+    }
 
     va_end(args);
 
