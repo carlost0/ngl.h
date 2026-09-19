@@ -25,15 +25,9 @@ int check_collision(i32 x1, i32 y1, i32 w1, i32 h1,
 }
 
 int main(void) {
-    u32 w, h;
-new_game:
-    get_term_size(&w, &h);
-    h--;
-
-    screen_t screen = screen_new(w, h);
-    input_ctx_t input_ctx = input_new();
-    font_t font = {.hpad = 2};
-    load_glyphs(&font, NULL);
+new_game: (void)0;
+    ngl_api_t ngl = ngl_new(.font.hpad = 2);
+    u32 w = ngl.screen.w, h = ngl.screen.h;
 
     ball_t ball = {
         .pos = vec2((f64)w / 2, (f64)h / 2),
@@ -57,12 +51,11 @@ new_game:
     bool running = true;
     bool lost = false;
     while (running) {
-        get_keyboard_state(&input_ctx);
+        get_keyboard_state(&ngl);
 
-        if (is_key_down(input_ctx, KEY_Q)) running = false;
-        if (is_key_down(input_ctx, KEY_R)) {
-            destroy_input(&input_ctx);
-            destroy_screen(&screen);
+        if (is_key_down(&ngl, KEY_Q)) running = false;
+        if (is_key_down(&ngl, KEY_R)) {
+            ngl_destroy(&ngl);
             goto new_game;
         }
 
@@ -71,26 +64,23 @@ new_game:
             const char *quit_text = "(q)uit";
             const char *restart_text = "(r)estart";
 
-            clear_bg(&screen, ' ', (color_t){0});
+            fill_bg(&ngl, ' ', (color_t){0});
             draw_text(
-                &screen,
-                font,
-                w / 2 - (strlen(loss_text) / 2) * (font.w + font.hpad), h/2 - 5,
+                &ngl,
+                w / 2 - (strlen(loss_text) / 2) * (ngl.font.w + ngl.font.hpad), h/2 - 5,
                 'l', (color_t){255,40,40},
                 loss_text);
             draw_text(
-                &screen,
-                font,
-                w / 2 - (strlen(quit_text) / 2) * (font.w + font.hpad), h / 2 + 4,
+                &ngl,
+                w / 2 - (strlen(quit_text) / 2) * (ngl.font.w + ngl.font.hpad), h / 2 + 4,
                 'Q', (color_t){200,60,60},
                 quit_text);
             draw_text(
-                &screen,
-                font,
-                w / 2 - (strlen(restart_text) / 2) * (font.w + font.hpad), h / 2 + 11,
+                &ngl,
+                w / 2 - (strlen(restart_text) / 2) * (ngl.font.w + ngl.font.hpad), h / 2 + 11,
                 'R', (color_t){200,60,60},
                 restart_text);
-            print_screen(&screen);
+            print_screen(&ngl);
             continue;
         }
         vec2_t new_pos = vec2_add(ball.vel, ball.pos);
@@ -114,29 +104,28 @@ new_game:
 
         ball.pos = new_pos;
 
-        if (is_key_down(input_ctx, KEY_W)) {
+        if (is_key_down(&ngl, KEY_W)) {
             if (paddle.pos.y - 1 > 0) paddle.pos.y--;
         }
 
-        if (is_key_down(input_ctx, KEY_S)) {
+        if (is_key_down(&ngl, KEY_S)) {
             if (paddle.pos.y + 1 + paddle.h < h) paddle.pos.y++;
         }
 
-        clear_bg(&screen, ' ', (color_t){0,0,0});
+        fill_bg(&ngl, ' ', (color_t){0,0,0});
 
-        draw_rect(&screen, paddle.pos.x, paddle.pos.y, paddle.w, paddle.h, '$', paddle.col);
-        draw_rect(&screen, (u32)ball.pos.x, (u32)ball.pos.y, ball.w, ball.h, '@', (color_t){0,255,0});
+        draw_rect(&ngl, paddle.pos.x, paddle.pos.y, paddle.w, paddle.h, '$', paddle.col);
+        draw_rect(&ngl, (u32)ball.pos.x, (u32)ball.pos.y, ball.w, ball.h, '@', (color_t){0,255,0});
 
-        draw_screen_borders(&screen, 0, (color_t){255, 255, 255});
+        draw_screen_borders(&ngl, 0, (color_t){255, 255, 255});
 
-        print_screen(&screen);
+        print_screen(&ngl);
         delay(1000/60);
     }
 
     clear_screen();
    
-    destroy_input(&input_ctx);
-    destroy_screen(&screen);
+    ngl_destroy(&ngl);
 }
 
 

@@ -1,6 +1,6 @@
 CC = cc
 DEBUG_CC = clang -fsanitize=address
-CFLAGS = -Wall -Wextra -pedantic
+CFLAGS = -std=c99 -Wall -Wextra -pedantic #-static
 
 default: *
 	$(CC) $(CFLAGS) ./00-hello-world.c -o hello
