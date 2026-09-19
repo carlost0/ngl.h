@@ -1,4 +1,4 @@
-CC = cc
+CC = clang
 DEBUG_CC = clang -fsanitize=address
 CFLAGS = -std=c99 -Wall -Wextra -pedantic #-static
 
