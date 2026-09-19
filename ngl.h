@@ -277,6 +277,48 @@ typedef struct {
  * +-------------------------------------------------------------------------+
  */
 
+/* Get an Error string out of an Error Code. */
+const char *ngl_error_to_string(ngl_error_t error);
+
+/* Default colors. */
+#ifndef NGL_BLACK
+#define NGL_BLACK ngl_color(0,0,0)
+#endif /* NGL_BLACK */
+
+#ifndef NGL_WHITE
+#define NGL_WHITE ngl_color(255,255,255)
+#endif /* NGL_WHITE */
+
+#ifndef NGL_RED
+#define NGL_RED ngl_color(255,0,0)
+#endif /* NGL_RED */
+
+#ifndef NGL_GREEN
+#define NGL_GREEN ngl_color(0,255,0)
+#endif /* NGL_GREEN */
+
+#ifndef NGL_YELLOW
+#define NGL_YELLOW ngl_color(255,255,0)
+#endif /* NGL_YELLOW */
+
+#ifndef NGL_BLUE
+#define NGL_BLUE ngl_color(0,0,255)
+#endif /* NGL_BLUE */
+
+#ifndef NGL_MAGENTA
+#define NGL_MAGENTA ngl_color(255,0,255)
+#endif /* NGL_MAGENTA */
+
+#ifndef NGL_CYAN
+#define NGL_CYAN ngl_color(0,255,255)
+#endif /* NGL_CYAN */
+
+
+/* Convert a 2d Coordinate into a 1d Index. */
+
+#ifndef ngl_idx
+#define ngl_idx(x, y, w) ((y) * (w) + (x))
+#endif /* ngl_idx */
 
 /* Create a new ngl API context, only works with designated initializers.
  * 
@@ -286,8 +328,21 @@ typedef struct {
 
 ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
+void ngl_destroy(ngl_t *api);
 
-ngl_error_t  print_screen(ngl_t *api);
+void ngl_delay(u32 ms);
+u64  ngl_get_ms(void);
+void ngl_clear_screen(void);
+
+ngl_error_t  ngl_get_term_size(u32 *w, u32 *h);
+
+ngl_error_t  ngl_init_screen(ngl_screen_t *screen);
+ngl_screen_t ngl_screen_new(u32 w, u32 h);
+ngl_error_t  ngl_destroy_screen(ngl_screen_t *screen);
+
+ngl_error_t  ngl_print_screen(ngl_t *api);
+
+
 
 ngl_error_t  ngl_fill_bg(ngl_t *api, char c, ngl_color_t color);
 
@@ -443,8 +498,6 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 #endif /* NGL_NO_MATH */
 
 #endif /* _NGL_H */
-
-
 
 
 #ifdef NGL_IMPLEMENTATION
