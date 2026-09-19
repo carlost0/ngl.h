@@ -12,7 +12,7 @@ ngl.h only has around 1000 lines of actual code, 450 semicolons and 100 open cur
 - Add windows support (maybe).
 
 # Usage
-Download ngl.h into your Project's directory: `wget https://github.com/carlost0/ngl.h/releases/download/v1.0.1/ngl.h`,
+Download ngl.h into your Project's directory: `wget https://github.com/carlost0/ngl.h/releases/download/v1.0.2/ngl.h`,
 then include ngl.h in your Program.
 
 See the example directory for a quick Guide on how to use ngl.h.
