@@ -99,13 +99,13 @@
 #endif /* NGL_NO_MATH */
 
 /* ngl.h Version. */
-#define NGL_VERSION_MAJOR 0
-#define NGL_VERSION_MINOR 2
+#define NGL_VERSION_MAJOR 1
+#define NGL_VERSION_MINOR 0
 #define NGL_VERSION_PATCH 0
 
 #define NGL_IS_RELEASE 0
 
-#define NGL_VERSION_STR "0.2.0-dev"
+#define NGL_VERSION_STR "1.0.0-dev"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -251,7 +251,7 @@ typedef struct {
     ngl_font_t      font;
 #endif /* NGL_NO_FONTS */
 
-} ngl_api_t;
+} ngl_t;
 
 
 /*
@@ -265,13 +265,13 @@ typedef struct {
 /* Create a new ngl API context, only works with designated initializers.
  * 
  * example:
- *  ngl_api_t ngl = ngl_new(.screen.w = 32, .screen.h = 32);
+ *  ngl_t ngl = ngl_new(.screen.w = 32, .screen.h = 32);
  */
 
-ngl_api_t _ngl_new(ngl_api_config_t config);
+ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
 
-void ngl_destroy(ngl_api_t *api);
+void ngl_destroy(ngl_t *api);
 
 /* Get an Error string out of an Error Code. */
 const char *ngl_error_to_string(ngl_error_t error);
@@ -324,21 +324,21 @@ ngl_screen_t ngl_screen_new(u32 w, u32 h);
 
 ngl_error_t  ngl_destroy_screen(ngl_screen_t *screen);
 
-ngl_error_t  ngl_print_screen(ngl_api_t *api);
+ngl_error_t  ngl_print_screen(ngl_t *api);
 
-ngl_error_t  ngl_fill_bg(ngl_api_t *api, char c, ngl_color_t color);
+ngl_error_t  ngl_fill_bg(ngl_t *api, char c, ngl_color_t color);
 
-ngl_error_t  ngl_set_pixel(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color);
+ngl_error_t  ngl_set_pixel(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color);
 
-ngl_error_t  ngl_draw_screen_borders(ngl_api_t *api, char c, ngl_color_t color); 
+ngl_error_t  ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color); 
 
-ngl_error_t  ngl_draw_rect(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
+ngl_error_t  ngl_draw_rect(ngl_t *api, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color);
 
 /* Draw a string with w*h dimensions. */
 /* NOTE: The String must be at least w*h Bytes long, else there would be a Buffer overflow. */ 
-ngl_error_t  ngl_draw_sprite(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, const char *sprite, ngl_color_t color);
+ngl_error_t  ngl_draw_sprite(ngl_t *api, u32 x, u32 y, u32 w, u32 h, const char *sprite, ngl_color_t color);
 
-ngl_error_t  ngl_draw_line(ngl_api_t *api, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
+ngl_error_t  ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
 
 
 
@@ -356,8 +356,8 @@ ngl_input_ctx_t ngl_input_new(void);
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
 ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
 
-ngl_key_state_t ngl_get_key_state(ngl_api_t *api, u16 key);
-ngl_error_t     ngl_get_keyboard_state(ngl_api_t *api);
+ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key);
+ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 
 
 #ifndef ngl_is_key_down
@@ -402,9 +402,9 @@ ngl_error_t     ngl_get_keyboard_state(ngl_api_t *api);
 /* Load specified glyphs into font, if the second parameter is NULL, the default glyphs will be used. */
 ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs);
 
-ngl_error_t ngl_draw_glyph(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, char glyph);
-ngl_error_t ngl_draw_text(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *str);
-ngl_error_t ngl_draw_text_fmt(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
+ngl_error_t ngl_draw_glyph(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, char glyph);
+ngl_error_t ngl_draw_text(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *str);
+ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...);
 
 #endif /* NGL_NO_FONTS */
 
@@ -490,8 +490,8 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
  * +-------------------------------------------------------------------------+
  */
 
-ngl_api_t _ngl_new(ngl_api_config_t config) {
-    ngl_api_t api = {0};
+ngl_t _ngl_new(ngl_api_config_t config) {
+    ngl_t api = {0};
 
     u32 screen_w = 0, screen_h = 0;
     if (!(config.screen.w && config.screen.h)) {
@@ -522,7 +522,7 @@ ngl_api_t _ngl_new(ngl_api_config_t config) {
     return api;
 }
 
-void ngl_destroy(ngl_api_t *api) {
+void ngl_destroy(ngl_t *api) {
 #ifndef NGL_NO_INPUT
     ngl_destroy_input(&api->input);
 #endif /* NGL_NO_INPUT */
@@ -692,7 +692,7 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
 }
 
 
-ngl_error_t ngl_fill_bg(ngl_api_t *api, char c, ngl_color_t color) {
+ngl_error_t ngl_fill_bg(ngl_t *api, char c, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
@@ -713,7 +713,7 @@ void ngl_clear_screen(void) {
     fflush(stdout);
 }
 
-ngl_error_t ngl_print_screen(ngl_api_t *api) {
+ngl_error_t ngl_print_screen(ngl_t *api) {
     ngl_screen_t *screen = &api->screen;
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
@@ -765,7 +765,7 @@ ngl_error_t ngl_print_screen(ngl_api_t *api) {
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_draw_screen_borders(ngl_api_t *api, char c, ngl_color_t color) {
+ngl_error_t ngl_draw_screen_borders(ngl_t *api, char c, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
@@ -826,7 +826,7 @@ ngl_error_t ngl_draw_screen_borders(ngl_api_t *api, char c, ngl_color_t color) {
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_set_pixel(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color) {
+ngl_error_t ngl_set_pixel(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
@@ -838,7 +838,7 @@ ngl_error_t ngl_set_pixel(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t colo
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_draw_rect(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color) {
+ngl_error_t ngl_draw_rect(ngl_t *api, u32 x, u32 y, u32 w, u32 h, char c, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !(screen->next.colors && screen->next.chars)) return ERR_INVALID_PTR;
@@ -856,7 +856,7 @@ ngl_error_t ngl_draw_rect(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, char c, ng
 
 
 /* NOTE: The String must be at least w*h Bytes long, else there would be a Buffer overflow. */ 
-ngl_error_t ngl_draw_sprite(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, const char *sprite, ngl_color_t color) {
+ngl_error_t ngl_draw_sprite(ngl_t *api, u32 x, u32 y, u32 w, u32 h, const char *sprite, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
@@ -877,7 +877,7 @@ ngl_error_t ngl_draw_sprite(ngl_api_t *api, u32 x, u32 y, u32 w, u32 h, const ch
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_draw_line(ngl_api_t *api, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color) {
+ngl_error_t ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color) {
     ngl_screen_t *screen = &api->screen;
 
     if (!screen || !screen->next.colors || !screen->next.chars) return ERR_INVALID_PTR;
@@ -931,7 +931,7 @@ ngl_error_t ngl_draw_line(ngl_api_t *api, u32 start_x, u32 start_y, u32 end_x, u
  *
  */
 
-ngl_key_state_t ngl_get_key_state(ngl_api_t *api, u16 key) {
+ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key) {
     if (key > KEY_MAX) return KSTATE_UP;
 
     if (api->input.old_key_states[key] != KSTATE_UP && api->input.key_states[key] == KSTATE_UP) return KSTATE_RELEASED;
@@ -1024,7 +1024,7 @@ ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_get_keyboard_state(ngl_api_t *api) {
+ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
     ngl_input_ctx_t *ctx = &api->input;
     struct pollfd *fd = &ctx->pfd;
 
@@ -1219,7 +1219,7 @@ ngl_error_t ngl_load_glyphs(ngl_font_t *font, const u32 *glyphs) {
     return ERR_SUCCESS;   
 }
 
-ngl_error_t ngl_draw_glyph(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, char glyph) {
+ngl_error_t ngl_draw_glyph(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, char glyph) {
     ngl_screen_t *screen = &api->screen;
     ngl_font_t font = api->font;
 
@@ -1253,7 +1253,7 @@ ngl_error_t ngl_draw_glyph(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t col
     return ERR_SUCCESS;
 }
 
-ngl_error_t ngl_draw_text(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *str) {
+ngl_error_t ngl_draw_text(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *str) {
     ngl_screen_t *screen = &api->screen;
     ngl_font_t font = api->font;
 
@@ -1297,7 +1297,7 @@ ngl_error_t ngl_draw_text(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t colo
 }
 
 #include <stdarg.h>
-ngl_error_t ngl_draw_text_fmt(ngl_api_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...) {
+ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t color, const char *format, ...) {
     va_list args;
     va_start(args, format);
 

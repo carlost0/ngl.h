@@ -9,7 +9,7 @@ echo "/* cc $FILE -o main */
 #include \"ngl.h\"
 
 int main(void) {
-    ngl_api_t ngl = ngl_new(0);
+    ngl_t ngl = ngl_new(0);
 
     bool running = true;
     clear_screen();

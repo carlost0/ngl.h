@@ -6,7 +6,7 @@
 static const u32 FPS = 30;
 
 int main(void) {
-    ngl_api_t ngl = ngl_new(.font.hpad = 2);
+    ngl_t ngl = ngl_new(.font.hpad = 2);
 
     const char *username = getenv("USER");
 

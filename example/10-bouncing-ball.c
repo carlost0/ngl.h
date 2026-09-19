@@ -19,7 +19,7 @@ int main(void) {
      * 
      * Since we use the default options, we put 0 as the parameter.
      */
-    ngl_api_t ngl = ngl_new(0);
+    ngl_t ngl = ngl_new(0);
 
     if (ngl.screen.status != ERR_SUCCESS) {
         fprintf(stderr, "ERROR: %s", error_to_string(ngl.screen.status));

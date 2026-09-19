@@ -26,7 +26,7 @@ int check_collision(i32 x1, i32 y1, i32 w1, i32 h1,
 
 int main(void) {
 new_game: (void)0;
-    ngl_api_t ngl = ngl_new(.font.hpad = 2);
+    ngl_t ngl = ngl_new(.font.hpad = 2);
     u32 w = ngl.screen.w, h = ngl.screen.h;
 
     ball_t ball = {
