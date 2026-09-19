@@ -25,7 +25,8 @@
  *  Link with the mathematical Library (-lm) if NGL_NO_MATH isn't set.
  *
  * usage:
- *  Include ngl.h in your file and define the NGL_IMPLEMENTATION Macro in your main File.
+ *  Include ngl.h in your file and define the NGL_IMPLEMENTATION Macro in
+ *  your main File.
  * 
  * configuration Macros:
  *  #define NGL_MALLOC:
@@ -134,7 +135,6 @@ typedef float    f32;
  * +-------------------------------------------------------------------------+
  * |                            ngl Types/Structs.                           |
  * +-------------------------------------------------------------------------+
- *
  */
 
 /* Basic RGB Color Struct. */
@@ -184,7 +184,6 @@ typedef struct {
  * +-------------------------------------------------------------------------+
  * |                       ngl input Types/Structs.                          |
  * +-------------------------------------------------------------------------+
- *
  */
 #ifndef NGL_NO_INPUT
 
@@ -209,7 +208,6 @@ typedef struct {
  * +-------------------------------------------------------------------------+
  * |                        ngl font Types/Structs.                          |
  * +-------------------------------------------------------------------------+
- *
  */
 
 #ifndef NGL_NO_FONTS
@@ -258,7 +256,6 @@ typedef struct {
  * +-------------------------------------------------------------------------+
  * |                            ngl main Module.                             |
  * +-------------------------------------------------------------------------+
- *
  */
 
 
@@ -349,8 +346,8 @@ ngl_error_t  ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 
  * +-------------------------------------------------------------------------+
  * |                            ngl input Module.                            |
  * +-------------------------------------------------------------------------+
- *
  */
+
 
 ngl_input_ctx_t ngl_input_new(void);
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
@@ -385,7 +382,6 @@ ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
  * +-------------------------------------------------------------------------+
  * |                            ngl font Module.                             |
  * +-------------------------------------------------------------------------+
- *
  */
 
 
@@ -395,8 +391,10 @@ ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
  * Since implementing ttf support would be overkill (I'm to lazy),
  * we must make some limitations:
  *  - The Glyphs must not be bigger than 5x5 pixels.
- *  - The Glyphs must only be symbols found in the ASCII table starting from '!' until '~'.
- *  - The Glyphs must be ordered the same way as they appear in the ASCII table.
+ *  - The Glyphs must only be symbols found in the ASCII table
+ *    starting from '!' until '~'.
+ *  - The Glyphs must be ordered the same way as they appear
+ *    in the ASCII table.
  */
 
 /* Load specified glyphs into font, if the second parameter is NULL, the default glyphs will be used. */
@@ -417,7 +415,6 @@ ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t colo
  * +-------------------------------------------------------------------------+
  * |                            ngl math Module.                             |
  * +-------------------------------------------------------------------------+
- *
  */
 
 
@@ -717,11 +714,14 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
     ngl_screen_t *screen = &api->screen;
     if (!screen || !(screen->next.chars && screen->next.colors)) return ERR_INVALID_PTR;
 
-    /* The length of "\x1b[38;2;255;255;255mC" */
+    /* The length of "\x1b[38;2;255;255;255mC". */
     u32 worst_case_pixel = 23;
     u32 cap = worst_case_pixel * screen->w * screen->h;
 
-    /* We draw into a temporary Buffer and write it all at once to STDOUT to reduce CPU Usage */
+    /*
+     * We draw into a temporary Buffer and write it all
+     * at once to stdout to reduce CPU Usage and Flickering.
+     */
     char *buf = (char *)NGL_MALLOC(cap * sizeof(char));
     if (!buf) return ERR_FAILED_MALLOC;
     u32 pos = 0;
@@ -740,8 +740,10 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
             char cchar          = screen->current.chars[i];
             ngl_color_t ccol = screen->current.colors[i];
 
-            /* Since ANSI Escape Codes don't reset the color automatically,
-             * we only have to change the Color if it differs from the previous color.
+            /*
+             * Since ANSI Escape Codes don't reset the color automatically,
+             * we only need to change the Color if it's different than the
+             * previous color.
              */
             if (!(ccol.r == last_col.r && ccol.g == last_col.g && ccol.b == last_col.b)) {
                 pos += snprintf(buf+pos, cap-pos, "\x1b[38;2;%u;%u;%um", ccol.r, ccol.g, ccol.b);
@@ -928,7 +930,6 @@ ngl_error_t ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 e
  * +-------------------------------------------------------------------------+
  * |                            ngl input Implementation.                    |
  * +-------------------------------------------------------------------------+
- *
  */
 
 ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key) {
@@ -1072,7 +1073,6 @@ ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
  * +-------------------------------------------------------------------------+
  * |                            ngl font Implementation.                     |
  * +-------------------------------------------------------------------------+
- *
  */
 
 
@@ -1339,7 +1339,6 @@ ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t colo
  * +-------------------------------------------------------------------------+
  * |                            ngl math Implementation.                     |
  * +-------------------------------------------------------------------------+
- *
  */
 
 NGL_MATHDEF ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b) {
@@ -1413,9 +1412,16 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle) {
 #endif /* NGL_NO_MATH */
 #endif /* NGL_IMPLEMENTATION */
 
+
 #ifndef _NGL_PREFIX
 #define _NGL_PREFIX
 #ifndef NGL_UNSTRIP_PREFIX
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                               Strip Prefices                            |
+ * +-------------------------------------------------------------------------+
+ */
 
 typedef ngl_error_t            error_t;
 typedef ngl_screen_t           screen_t;
