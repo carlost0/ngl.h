@@ -16,9 +16,9 @@ int main(void) {
 
     while (running) {
         /* Input handling. */
-        get_keyboard_state(&api);
+        get_keyboard_state(&ngl);
 
-        if (is_key_down(ngl, KEY_Q)) running = false;
+        if (is_key_down(&ngl, KEY_Q)) running = false;
 
         /* Game Logic here. */
         

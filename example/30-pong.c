@@ -9,7 +9,8 @@ typedef struct {
 } ball_t;
 
 typedef struct {
-    vec2_t  pos;
+    vec2_t    pos;
+    ngl_float vy;
     u32     w, h;
     color_t col;
 } paddle_t;
@@ -30,20 +31,21 @@ new_game: (void)0;
     u32 w = ngl.screen.w, h = ngl.screen.h;
 
     ball_t ball = {
-        .pos = vec2((f64)w / 2, (f64)h / 2),
+        .pos = vec2(w / 2.0, h / 2.0),
 
-        .vel = vec2(1, 0.67),
+        .vel = vec2(60, 40),
 
-        .w = w/30,
-        .h = (f64)w/30/1.67,
+        .w = w / 30.0,
+        .h = w / 30.0 / 1.67,
     };
    
     paddle_t paddle = {
         .pos = vec2(2, (f64)h / 2),
+        .vy = 50,
 
         .w = 3,
         .h = h/5,
-        .col = {255, 0, 0},
+        .col = RED,
     };
 
     clear_screen();
@@ -67,7 +69,7 @@ new_game: (void)0;
             fill_bg(&ngl, ' ', (color_t){0});
             draw_text(
                 &ngl,
-                w / 2 - (strlen(loss_text) / 2) * (ngl.font.w + ngl.font.hpad), h/2 - 5,
+                w / 2 - (strlen(loss_text) / 2) * (ngl.font.w + ngl.font.hpad), h / 2 - 5,
                 'l', (color_t){255,40,40},
                 loss_text);
             draw_text(
@@ -83,7 +85,9 @@ new_game: (void)0;
             print_screen(&ngl);
             continue;
         }
-        vec2_t new_pos = vec2_add(ball.vel, ball.pos);
+        get_dt(&ngl);
+
+        vec2_t new_pos = vec2_add(vec2_scale(ball.vel, ngl.dt), ball.pos);
 
         if ( (u32)new_pos.x <= 0) {
             lost = true;
@@ -100,27 +104,27 @@ new_game: (void)0;
             ball.vel.x *= -1;
         }
 
-        new_pos = vec2_add(ball.vel, ball.pos);
+        new_pos = vec2_add(vec2_scale(ball.vel, ngl.dt), ball.pos);
 
         ball.pos = new_pos;
 
         if (is_key_down(&ngl, KEY_W)) {
-            if (paddle.pos.y - 1 > 0) paddle.pos.y--;
+            if (paddle.pos.y - paddle.vy*ngl.dt > 1) paddle.pos.y -= paddle.vy * ngl.dt;
         }
 
         if (is_key_down(&ngl, KEY_S)) {
-            if (paddle.pos.y + 1 + paddle.h < h) paddle.pos.y++;
+            if (paddle.pos.y + paddle.vy*ngl.dt + paddle.h < h) paddle.pos.y += paddle.vy * ngl.dt;
         }
 
         fill_bg(&ngl, ' ', (color_t){0,0,0});
 
         draw_rect(&ngl, paddle.pos.x, paddle.pos.y, paddle.w, paddle.h, '$', paddle.col);
-        draw_rect(&ngl, (u32)ball.pos.x, (u32)ball.pos.y, ball.w, ball.h, '@', (color_t){0,255,0});
+        draw_rect(&ngl, ball.pos.x, ball.pos.y, ball.w, ball.h, '@', GREEN);
 
         draw_screen_borders(&ngl, 0, (color_t){255, 255, 255});
 
         print_screen(&ngl);
-        delay(1000/60);
+        delay(1000.0 / 60.0 - ngl.dt);
     }
 
     clear_screen();

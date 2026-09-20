@@ -120,12 +120,12 @@
 
 /* ngl.h Version. */
 #define NGL_VERSION_MAJOR 1
-#define NGL_VERSION_MINOR 0
+#define NGL_VERSION_MINOR 1
 #define NGL_VERSION_PATCH 0
 
 #define NGL_IS_RELEASE 0
 
-#define NGL_VERSION_STR "1.0.2-dev"
+#define NGL_VERSION_STR "1.1.0-dev"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -140,6 +140,18 @@ typedef uint64_t u64;
 
 typedef double   f64;
 typedef float    f32;
+
+#ifndef NGL_USE_F64
+# define ngl_float f32
+# define NGL_SQRT sqrtf
+# define NGL_SIN sinf
+# define NGL_COS cosf
+#else 
+# define ngl_float f64
+# define NGL_SQRT sqrt
+# define NGL_SIN sin
+# define NGL_COS cos
+#endif /* NGL_USE_F64 */
 
 #ifndef NGL_MALLOC
 #define NGL_MALLOC(s) malloc(s)
@@ -204,6 +216,7 @@ typedef struct {
  * |                       ngl input Types/Structs.                          |
  * +-------------------------------------------------------------------------+
  */
+
 #ifndef NGL_NO_INPUT
 
 typedef enum {
@@ -244,6 +257,10 @@ typedef struct {
  * calling ngl_new.
  */
 typedef struct {
+    struct {
+        u32 w, h;
+    } screen;
+
 #ifndef NGL_NO_FONTS
     struct {
         u32 w, h;
@@ -251,14 +268,14 @@ typedef struct {
         const u32 *glyphs;
     } font;
 #endif /* NGL_NO_FONTS */
-
-    struct {
-        u32 w, h;
-    } screen;
 } ngl_api_config_t;
+
 
 typedef struct {
     ngl_screen_t    screen;
+
+    u64             current_ms;
+    ngl_float       dt;
 
 #ifndef NGL_NO_INPUT
     ngl_input_ctx_t input;
@@ -330,8 +347,10 @@ ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
 void ngl_destroy(ngl_t *api);
 
-void ngl_delay(u32 ms);
-u64  ngl_get_ms(void);
+void       ngl_delay(u32 ms);
+u64        ngl_get_ms(void);
+ngl_float  ngl_get_dt(ngl_t *api);
+
 void ngl_clear_screen(void);
 
 ngl_error_t  ngl_get_term_size(u32 *w, u32 *h);
@@ -341,7 +360,6 @@ ngl_screen_t ngl_screen_new(u32 w, u32 h);
 ngl_error_t  ngl_destroy_screen(ngl_screen_t *screen);
 
 ngl_error_t  ngl_print_screen(ngl_t *api);
-
 
 
 ngl_error_t  ngl_fill_bg(ngl_t *api, char c, ngl_color_t color);
@@ -447,13 +465,6 @@ ngl_error_t ngl_draw_text_fmt(ngl_t *api, u32 x, u32 y, char c, ngl_color_t colo
 #endif /* NGL_MATHDEF */
 
 
-#ifndef NGL_USE_F64
-#define ngl_float f32
-#define NGL_SQRT sqrtf
-#define NGL_SIN sinf
-#define NGL_COS cosf
-#endif /* ngl_float */
-
 typedef struct {
     ngl_float x, y;
 } ngl_vec2_t;
@@ -519,6 +530,9 @@ ngl_t _ngl_new(ngl_api_config_t config) {
         screen_w = config.screen.w;
         screen_h = config.screen.h;
     }
+
+    api.dt = 0.0;
+    api.current_ms = ngl_get_ms();
 
     api.screen = ngl_screen_new(screen_w, screen_h);
 
@@ -661,6 +675,13 @@ u64 ngl_get_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+ngl_float ngl_get_dt(ngl_t *api) {
+    u64 oldtime = api->current_ms;
+    api->current_ms = ngl_get_ms();
+    api->dt = ((ngl_float)api->current_ms - (ngl_float)oldtime) / 1000.0;
+    return api->dt;
 }
 
 /* Function originaly written by Glenn Chappell & Ian Chai 14 Apr 1993 */
@@ -1459,6 +1480,8 @@ typedef ngl_color_t            color_t;
 
 #define delay                  ngl_delay
 #define get_ms                 ngl_get_ms
+#define get_dt                 ngl_get_dt
+
 #define clear_screen           ngl_clear_screen
 
 #define get_term_size          ngl_get_term_size
