@@ -10,7 +10,8 @@ int main(void) {
     /* Nearly all ngl.h functions return an error Code. */
     error_t err = 0;
 
-    /* ngl_api_t holds all the Context ngl needs to work (Screen buffers,
+    /*
+     * ngl_t holds all the Context ngl needs to work (Screen buffers,
      * screen size, font, input device etc.).
      * We could also configure things like the screen size or font padding,
      * example:

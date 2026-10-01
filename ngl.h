@@ -169,12 +169,26 @@ typedef float    f32;
  */
 
 /* Basic RGB Color Struct. */
-typedef struct { u8 r, g, b; } ngl_color_t;
+typedef struct {
+    u8 r;
+    u8 g;
+    u8 b;
+} ngl_color_t;
 
 /* Constructor */
 #ifndef ngl_color
-#define ngl_color(r,g,b) ((ngl_color_t){r,g,b})
+#define ngl_color(red,green,blue) ((ngl_color_t){.r=(red),.g=(green),.b=(blue)})
 #endif /* ngl_color */
+
+#ifndef ngl_hex
+
+#define ngl_hex(v) ((ngl_color_t){ \
+        .r = (char)((v >> 16) & 0xFF), \
+        .g = (char)((v >> 8 ) & 0xFF), \
+        .b = (char)((v >> 0 ) & 0xFF), \
+})
+
+#endif /* ngl_hex */
 
 /* Most ngl Functions return this Type. */
 /*
@@ -220,10 +234,11 @@ typedef struct {
 #ifndef NGL_NO_INPUT
 
 typedef enum {
-    KSTATE_UP       = 0,
-    KSTATE_DOWN     = 1,
-    KSTATE_REPEAT   = 2,
-    KSTATE_RELEASED = 3,
+    KSTATE_UP = 0,
+    KSTATE_DOWN,
+    KSTATE_REPEAT,
+    KSTATE_RELEASED,
+    KSTATE_PRESSED,
 } ngl_key_state_t;
 
 typedef struct {
@@ -351,6 +366,9 @@ void       ngl_delay(u32 ms);
 u64        ngl_get_ms(void);
 ngl_float  ngl_get_dt(ngl_t *api);
 
+i32        ngl_randr(i32 min, i32 max);
+ngl_float  ngl_randf(void);
+
 void ngl_clear_screen(void);
 
 ngl_error_t  ngl_get_term_size(u32 *w, u32 *h);
@@ -392,9 +410,10 @@ ngl_input_ctx_t ngl_input_new(void);
 ngl_error_t     ngl_init_input(ngl_input_ctx_t *ctx);
 ngl_error_t     ngl_destroy_input(ngl_input_ctx_t *ctx);
 
-/* This function should only be called once per Frame. */
-ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key);
 
+ngl_key_state_t ngl_get_key_state(const ngl_t *api, u16 key);
+
+/* This function should only be called once per Frame. */
 ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 
 
@@ -407,12 +426,16 @@ ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 #define ngl_is_key_pressed_repeat(api, key) (ngl_get_key_state(api, key) == KSTATE_REPEAT)
 #endif /* is_key_pressed_repeat */
 
+#ifndef ngl_is_key_pressed
+#define ngl_is_key_pressed(api, key)       (ngl_get_key_state(api, key) == KSTATE_PRESSED)
+#endif /* is_key_down */
+
 #ifndef ngl_is_key_released
 #define ngl_is_key_released(api, key)       (ngl_get_key_state(api, key) == KSTATE_RELEASED)
 #endif /* is_key_down */
 
 
-#endif /* NGL_NO_INPUT */
+#endif /* NGL_NO_pressed */
 
 
 
@@ -684,6 +707,19 @@ ngl_float ngl_get_dt(ngl_t *api) {
     return api->dt;
 }
 
+i32 ngl_randr(i32 min, i32 max) {
+    if (min > max) {
+        return 0;
+    }
+
+    return (u32)(min + rand() % (max - min + 1));
+
+}
+
+ngl_float ngl_randf(void) {
+    return (ngl_float) rand() / RAND_MAX;
+}
+
 /* Function originaly written by Glenn Chappell & Ian Chai 14 Apr 1993 */
 ngl_error_t ngl_get_term_size(u32 *w, u32 *h) {
     if (!(w && h)) return ERR_INVALID_PTR;
@@ -757,7 +793,7 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
     if (!buf) return ERR_FAILED_MALLOC;
     u32 pos = 0;
 
-    ngl_color_t last_col = {0,0,0};
+    ngl_color_t last_col = {0};
 
     pos += snprintf(buf+pos, cap-pos, "\x1b[H");
 
@@ -963,10 +999,11 @@ ngl_error_t ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 e
  * +-------------------------------------------------------------------------+
  */
 
-ngl_key_state_t ngl_get_key_state(ngl_t *api, u16 key) {
+ngl_key_state_t ngl_get_key_state(const ngl_t *api, u16 key) {
     if (key > KEY_MAX) return KSTATE_UP;
 
     if (api->input.old_key_states[key] != KSTATE_UP && api->input.key_states[key] == KSTATE_UP) return KSTATE_RELEASED;
+    if (api->input.old_key_states[key] == KSTATE_UP && api->input.key_states[key] != KSTATE_UP) return KSTATE_PRESSED;
     return api->input.key_states[key];
 }
 
@@ -1509,6 +1546,7 @@ typedef ngl_input_ctx_t        input_ctx_t;
 typedef ngl_key_state_t        key_state_t;
 
 #define is_key_down            ngl_is_key_down
+#define is_key_pressed         ngl_is_key_pressed
 #define is_key_pressed_repeat  ngl_is_key_pressed_repeat
 #define is_key_released        ngl_is_key_released
 

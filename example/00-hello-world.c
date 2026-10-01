@@ -18,8 +18,8 @@ int main(void) {
         if (is_key_down(&ngl, KEY_Q)) running = 0;
 
         fill_bg(&ngl, '#', (color_t){0,0,0});
-        draw_text_fmt(&ngl, 2, 2, 'l', (color_t){255,255,255}, "Hello, %s!", username);
-        draw_screen_borders(&ngl, 0, (color_t){255,255,255});
+        draw_text_fmt(&ngl, 2, 2, 'l', WHITE, "Hello, %s!", username);
+        draw_screen_borders(&ngl, 0, WHITE);
         print_screen(&ngl);
 
         delay(1000/FPS);
