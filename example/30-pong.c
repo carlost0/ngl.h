@@ -1,5 +1,6 @@
 /* cc -o pong examples/30-pong.c */
 #define NGL_IMPLEMENTATION
+#define NGL_DOUBLE_CHARS
 #include "../ngl.h"
 
 typedef struct {
@@ -33,17 +34,17 @@ new_game: (void)0;
     ball_t ball = {
         .pos = vec2(w / 2.0, h / 2.0),
 
-        .vel = vec2(60, 40),
+        .vel = vec2(40, 40),
 
         .w = w / 30.0,
-        .h = w / 30.0 / 1.67,
+        .h = w / 30.0,
     };
    
     paddle_t paddle = {
         .pos = vec2(2, (f64)h / 2),
         .vy = 50,
 
-        .w = 3,
+        .w = 1,
         .h = h/5,
         .col = RED,
     };
@@ -116,12 +117,12 @@ new_game: (void)0;
             if (paddle.pos.y + paddle.vy*ngl.dt + paddle.h < h) paddle.pos.y += paddle.vy * ngl.dt;
         }
 
-        fill_bg(&ngl, ' ', (color_t){0,0,0});
+        fill_bg(&ngl, ' ', BLACK);
 
         draw_rect(&ngl, paddle.pos.x, paddle.pos.y, paddle.w, paddle.h, '$', paddle.col);
-        draw_rect(&ngl, ball.pos.x, ball.pos.y, ball.w, ball.h, '@', GREEN);
+        draw_rect(&ngl, ball.pos.x, ball.pos.y, ball.w, ball.h, 'l', GREEN);
 
-        draw_screen_borders(&ngl, 0, (color_t){255, 255, 255});
+        draw_screen_borders(&ngl, '[', WHITE);
 
         print_screen(&ngl);
         delay(1000.0 / 60.0 - ngl.dt);

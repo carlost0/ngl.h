@@ -1103,6 +1103,7 @@ static bool _ngl_find_keyboard(ngl_input_ctx_t *ctx) {
             ctx->pfds[ctx->device_amount].fd = fd;
             ctx->pfds[ctx->device_amount].events = POLLIN;
             ctx->device_amount++;
+            found = true;
             continue;
         }
 
