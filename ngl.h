@@ -51,17 +51,29 @@
  *   Disable the math Module.
  *
  *  #define NGL_SERIOUS_ERRORS:
- *   Removes the ":(" / ":)" at the end of Error messages.
+ *   Remove the ":(" / ":)" at the end of Error messages.
  *
  *  #define NGL_MATHDEF:
  *   Set the way Functions should be defined in the math Module.
  *   Default: static inline.
  *
- *  #define NGL_USE_F64
+ *  #define NGL_USE_F64:
  *   Make the Math module use 64 bit floats instead of 32 bit.
+ *
+ *  #define NGL_DOUBLE_CHARS:
+ *   Draw each character twice when printing the screen, this makes each
+ *   Pixel have close to a 1:1 Ratio, instead of the normal 2:1 Ratio.
+ *
+ *  #define NGL_NO_DOUBLE_BUFFERING:
+ *   Disable double buffered Screen printing.
+ *
+ *  #define NGL_INPUT_MAX_DEVICES:
+ *   Maximum amount of devices to poll from.
+ *   Default: 32.
  *
  * Examples: checkout README.md and example directory.
  */
+
 #ifndef _NGL_H
 #define _NGL_H
 
@@ -161,12 +173,16 @@ typedef float    f32;
 #define NGL_FREE(p) free(p)
 #endif /* NGL_FREE */
 
+#ifndef NGL_INPUT_MAX_DEVICES
+#define NGL_INPUT_MAX_DEVICES 32
+#endif /* NGL_INPUT_MAX_DEVICES */
 
 /*
  * +-------------------------------------------------------------------------+
  * |                            ngl Types/Structs.                           |
  * +-------------------------------------------------------------------------+
  */
+
 
 /* Basic RGB Color Struct. */
 typedef struct {
@@ -183,9 +199,9 @@ typedef struct {
 #ifndef ngl_hex
 
 #define ngl_hex(v) ((ngl_color_t){ \
-        .r = (char)((v >> 16) & 0xFF), \
-        .g = (char)((v >> 8 ) & 0xFF), \
-        .b = (char)((v >> 0 ) & 0xFF), \
+    .r = (char)((v >> 16) & 0xFF), \
+    .g = (char)((v >> 8 ) & 0xFF), \
+    .b = (char)((v >> 0 ) & 0xFF), \
 })
 
 #endif /* ngl_hex */
@@ -219,7 +235,11 @@ typedef struct {
 /* All the drawing will be done to the "next" Buffer this Struct. */
 typedef struct {
     u32 w, h;
+
+#ifndef NGL_NO_DOUBLE_BUFFERING
     ngl_buf_t current;
+#endif /* NGL_NO_DOUBLE_BUFFERING */
+
     ngl_buf_t next;
     ngl_error_t status;
 } ngl_screen_t;
@@ -242,11 +262,12 @@ typedef enum {
 } ngl_key_state_t;
 
 typedef struct {
-    struct pollfd   pfd;
+    struct pollfd   pfds[NGL_INPUT_MAX_DEVICES];
     struct termios  oldt;
     ngl_key_state_t key_states[KEY_MAX + 1];
     ngl_key_state_t old_key_states[KEY_MAX + 1];
     ngl_error_t     status;
+    size_t          device_amount;
 } ngl_input_ctx_t;
 
 #endif /* NGL_NO_INPUT */
@@ -559,6 +580,11 @@ ngl_t _ngl_new(ngl_api_config_t config) {
 
     api.screen = ngl_screen_new(screen_w, screen_h);
 
+#ifdef NGL_DOUBLE_CHARS
+        api.screen.w /= 2;
+#endif /* NGL_DOUBLE_CHARS */
+
+
 #ifndef NGL_NO_INPUT
     api.input = ngl_input_new();
 #endif /* NGL_NO_INPUT */
@@ -592,6 +618,7 @@ ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
     u32 n = screen->w * screen->h;
 
     /* Allocate front Buffer. */
+#ifndef NGL_NO_DOUBLE_BUFFERING
     screen->current.colors = (ngl_color_t*)NGL_MALLOC(n * sizeof(ngl_color_t));
     if (!screen->current.colors) return ERR_FAILED_MALLOC;
 
@@ -600,27 +627,34 @@ ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
         NGL_FREE(screen->current.colors);
         return ERR_FAILED_MALLOC;
     }
+#endif /* NGL_NO_DOUBLE_BUFFERING */
 
 
     /* Allocate back Buffer. */
     screen->next.colors = (ngl_color_t*)NGL_MALLOC(n * sizeof(ngl_color_t));
     if (!screen->next.colors) {
+#ifndef NGL_NO_DOUBLE_BUFFERING
         NGL_FREE(screen->current.colors);
         NGL_FREE(screen->current.chars);
+#endif /* NGL_NO_DOUBLE_BUFFERING */
         return ERR_FAILED_MALLOC;
     }
 
     screen->next.chars = (char*)NGL_MALLOC(n * sizeof(char));
     if (!screen->next.chars) {
         NGL_FREE(screen->next.colors);
+#ifndef NGL_NO_DOUBLE_BUFFERING
         NGL_FREE(screen->current.colors);
         NGL_FREE(screen->current.chars);
+#endif /* NGL_NO_DOUBLE_BUFFERING */
         return ERR_FAILED_MALLOC;
     }
 
     /* Zero-initialize both Buffers. */
+#ifndef NGL_NO_DOUBLE_BUFFERING
     memset(screen->current.colors, 0, n * sizeof(ngl_color_t));
     memset(screen->current.chars,  ' ', n * sizeof(char));
+#endif /* NGL_NO_DOUBLE_BUFFERING */
 
     memset(screen->next.colors, 0, n * sizeof(ngl_color_t));
     memset(screen->next.chars,  ' ', n * sizeof(char));
@@ -629,7 +663,11 @@ ngl_error_t ngl_init_screen(ngl_screen_t *screen) {
 }
 
 ngl_screen_t ngl_screen_new(u32 w, u32 h) {
+#ifndef NGL_NO_DOUBLE_BUFFERING
     ngl_screen_t screen = {w, h, {0}, {0}, ERR_SUCCESS};
+#else
+    ngl_screen_t screen = {w, h, {0}, ERR_SUCCESS};
+#endif /* NGL_NO_DOUBLE_BUFFERING */
     ngl_error_t err = ngl_init_screen(&screen);
     screen.status = err;
 
@@ -717,7 +755,7 @@ i32 ngl_randr(i32 min, i32 max) {
 }
 
 ngl_float ngl_randf(void) {
-    return (ngl_float) rand() / RAND_MAX;
+    return (ngl_float)rand() / (ngl_float)RAND_MAX;
 }
 
 /* Function originaly written by Glenn Chappell & Ian Chai 14 Apr 1993 */
@@ -743,8 +781,10 @@ ngl_error_t ngl_destroy_screen(ngl_screen_t *screen) {
 
     ngl_error_t err = ERR_SUCCESS;
     /* Free front Buffer. */
+#ifndef NGL_NO_DOUBLE_BUFFERING
     if (screen->current.colors) NGL_FREE(screen->current.colors);
     if (screen->current.chars) NGL_FREE(screen->current.chars);
+#endif /* NGL_NO_DOUBLE_BUFFERING */
 
     /* Free back Buffer. */
     if (screen->next.colors) NGL_FREE(screen->next.colors);
@@ -805,10 +845,15 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
                 return ERR_INVALID_SIZE;
             }
 
-            /* current index, character and color */
-            u32 i = ngl_idx(x, y, screen->w);
-            char cchar          = screen->current.chars[i];
-            ngl_color_t ccol = screen->current.colors[i];
+            /* Current Index, Character and Color. */
+            u32         i     = ngl_idx(x, y, screen->w);
+#ifndef NGL_NO_DOUBLE_BUFFERING
+            char        cchar = screen->current.chars[i];
+            ngl_color_t ccol  = screen->current.colors[i];
+#else 
+            char        cchar = screen->next.chars[i];
+            ngl_color_t ccol  = screen->next.colors[i];
+#endif /* NGL_NO_DOUBLE_BUFFERING */
 
             /*
              * Since ANSI Escape Codes don't reset the color automatically,
@@ -821,6 +866,10 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
             }
 
             buf[pos++] = cchar;
+#ifdef NGL_DOUBLE_CHARS
+            buf[pos++] = cchar;
+#endif /* NGL_DOUBLE_CHARS */
+
         }
         buf[pos++] = '\n';
     }
@@ -830,9 +879,12 @@ ngl_error_t ngl_print_screen(ngl_t *api) {
     NGL_FREE(buf);
 
     /* Swap buffers. */
+
+#ifndef NGL_NO_DOUBLE_BUFFERING
     ngl_buf_t tmp = screen->current;
     screen->current = screen->next;
     screen->next = tmp;
+#endif /* NGL_NO_DOUBLE_BUFFERING */
 
     return ERR_SUCCESS;
 }
@@ -1035,33 +1087,36 @@ static bool _ngl_is_keyboard(i32 fd) {
        _ngl_test_bit(key_bits, KEY_SPACE);
 }
 
-static i32 _ngl_find_keyboard(void) {
+static bool _ngl_find_keyboard(ngl_input_ctx_t *ctx) {
     char path[64];
-    u32 i;
+    bool found = false;
+    
+    size_t i;
     for (i = 0; i < 32; ++i) {
-        snprintf(path, sizeof(path), "/dev/input/event%d", i);
+        snprintf(path, sizeof(path), "/dev/input/event%zu", i);
 
         int fd = open(path, O_RDONLY | O_NONBLOCK);
         if (fd < 0)
             continue;
 
-        if (_ngl_is_keyboard(fd))
-            return fd;
+        if (_ngl_is_keyboard(fd)) {
+            ctx->pfds[ctx->device_amount].fd = fd;
+            ctx->pfds[ctx->device_amount].events = POLLIN;
+            ctx->device_amount++;
+            continue;
+        }
 
         close(fd);
     }
 
-    return -1;
+    return found;
 }
 
 ngl_error_t ngl_init_input(ngl_input_ctx_t *ctx) {
-    int fd = _ngl_find_keyboard();
-    if (fd == -1) {
+    bool success = _ngl_find_keyboard(ctx);
+    if (!success) {
         return ERR_FAILED_FILE_OPEN;
     }
-
-    ctx->pfd.fd = fd;
-    ctx->pfd.events = POLLIN;
 
     memset(&ctx->key_states, 0, sizeof(ngl_key_state_t) * (KEY_MAX + 1));
 
@@ -1088,7 +1143,10 @@ ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
 
     tcsetattr(STDIN_FILENO, TCSANOW, &ctx->oldt);
 
-    if (close(ctx->pfd.fd) < 0) return ERR_FAILED_FILE_CLOSE;
+    size_t i;
+    for (i = 0; i < ctx->device_amount; ++i) {
+        close(ctx->pfds[i].fd);
+    }
 
     return ERR_SUCCESS;
 }
@@ -1096,40 +1154,44 @@ ngl_error_t ngl_destroy_input(ngl_input_ctx_t *ctx) {
 /* This Function is intended to only be called once per Frame. */
 ngl_error_t ngl_get_keyboard_state(ngl_t *api) {
     ngl_input_ctx_t *ctx = &api->input;
-    struct pollfd *fd = &ctx->pfd;
 
-    fd->revents = 0;
-    i32 status = poll(fd, 1, 0);
+    size_t i;
+    for (i = 0; i < ctx->device_amount; ++i) {
+        struct pollfd *fd = &ctx->pfds[i];
 
-    if (status < 0 && errno == EINTR) return ERR_SUCCESS;
-    
-    if (fd->revents & (POLLERR|POLLHUP|POLLNVAL)) {
-        return ERR_FAILED_POLL;
-    }
+        fd->revents = 0;
+        i32 status = poll(fd, 1, 0);
 
-    memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states));
-
-    if (fd->revents & POLLIN) {
-        struct input_event events[64];
-
-        ssize_t bytes = read(fd->fd, events, sizeof(events));
-
-        if (bytes == -1) {
-            return ERR_FAILED_FILE_READ;
+        if (status < 0 && errno == EINTR) return ERR_SUCCESS;
+        
+        if (fd->revents & (POLLERR|POLLHUP|POLLNVAL)) {
+            return ERR_FAILED_POLL;
         }
 
-        if (bytes % sizeof(struct input_event) != 0) {
-            return ERR_FAILED_FILE_READ;
-        }
+        memcpy(&ctx->old_key_states, &ctx->key_states, sizeof(ctx->key_states));
 
-        size_t count = bytes / sizeof(struct input_event);
+        if (fd->revents & POLLIN) {
+            struct input_event events[64];
 
-        u32 i;
-        for (i = 0; i < count; i++) {
-            struct input_event *ev = &events[i];
+            ssize_t bytes = read(fd->fd, events, sizeof(events));
 
-            if (ev->type == EV_KEY) {
-                ctx->key_states[ev->code] = (ngl_key_state_t)ev->value;
+            if (bytes == -1) {
+                return ERR_FAILED_FILE_READ;
+            }
+
+            if (bytes % sizeof(struct input_event) != 0) {
+                return ERR_FAILED_FILE_READ;
+            }
+
+            size_t count = bytes / sizeof(struct input_event);
+
+            u32 i;
+            for (i = 0; i < count; i++) {
+                struct input_event *ev = &events[i];
+
+                if (ev->type == EV_KEY) {
+                    ctx->key_states[ev->code] = (ngl_key_state_t)ev->value;
+                }
             }
         }
     }
@@ -1518,6 +1580,9 @@ typedef ngl_color_t            color_t;
 #define delay                  ngl_delay
 #define get_ms                 ngl_get_ms
 #define get_dt                 ngl_get_dt
+
+#define randr                  ngl_randr
+#define randf                  ngl_randf
 
 #define clear_screen           ngl_clear_screen
 
