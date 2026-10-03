@@ -135,9 +135,9 @@
 #define NGL_VERSION_MINOR 1
 #define NGL_VERSION_PATCH 0
 
-#define NGL_IS_RELEASE 0
+#define NGL_IS_RELEASE 1
 
-#define NGL_VERSION_STR "1.1.0-dev"
+#define NGL_VERSION_STR "1.1.0-release"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -448,7 +448,11 @@ ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 #endif /* is_key_pressed_repeat */
 
 #ifndef ngl_is_key_pressed
-#define ngl_is_key_pressed(api, key)       (ngl_get_key_state(api, key) == KSTATE_PRESSED)
+#define ngl_is_key_pressed(api, key)        (ngl_get_key_state(api, key) == KSTATE_PRESSED)
+#endif /* is_key_down */
+
+#ifndef ngl_is_key_up
+#define ngl_is_key_up(api, key)             (ngl_get_key_state(api, key) == KSTATE_UP)
 #endif /* is_key_down */
 
 #ifndef ngl_is_key_released
@@ -1614,6 +1618,7 @@ typedef ngl_key_state_t        key_state_t;
 #define is_key_down            ngl_is_key_down
 #define is_key_pressed         ngl_is_key_pressed
 #define is_key_pressed_repeat  ngl_is_key_pressed_repeat
+#define is_key_up              ngl_is_key_up
 #define is_key_released        ngl_is_key_released
 
 #define init_input             ngl_init_input
