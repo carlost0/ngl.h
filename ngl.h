@@ -341,6 +341,8 @@ typedef struct {
  * +-------------------------------------------------------------------------+
  */
 
+
+
 /* Get an Error string out of an Error Code. */
 const char *ngl_error_to_string(ngl_error_t error);
 
@@ -430,6 +432,7 @@ ngl_error_t  ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 
  */
 
 
+
 void       ngl_delay(u32 ms);
 u64        ngl_get_ms(void);
 ngl_float  ngl_get_dt(ngl_t *api);
@@ -441,6 +444,8 @@ ngl_float  ngl_get_dt(ngl_t *api);
 
 
 #ifndef NGL_NO_RAND
+
+
 
 /*
  * +-------------------------------------------------------------------------+
@@ -465,6 +470,7 @@ ngl_float  ngl_randf(void);
  * |                            ngl input Module.                            |
  * +-------------------------------------------------------------------------+
  */
+
 
 
 ngl_input_ctx_t ngl_input_new(void);
@@ -577,6 +583,18 @@ typedef struct {
 #define ngl_deg_to_rad(theta) ((theta) * (PI / 180.0f))
 #endif /* ngl_deg_to_rad */
 
+#ifndef ngl_max
+#define ngl_max(a, b) (((a) > b)? (a) : (b))
+#endif /* ngl_max */
+
+#ifndef ngl_min
+#define ngl_min(a, b) (((a) < (b))? (a) : (b))
+#endif /* ngl_min */
+
+#ifndef ngl_clamp
+#define ngl_clamp(n, min, max) (ngl_min(ngl_max((n), (min)), (max)))
+#endif /* ngl_clamp */
+
 NGL_MATHDEF ngl_vec2_t ngl_vec2_add(ngl_vec2_t a, ngl_vec2_t b);
 NGL_MATHDEF ngl_vec2_t ngl_vec2_sub(ngl_vec2_t a, ngl_vec2_t b);
 NGL_MATHDEF ngl_vec2_t ngl_vec2_mul(ngl_vec2_t a, ngl_vec2_t b);
@@ -598,7 +616,6 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 #ifndef ngl_vec2_mag
 #define ngl_vec2_mag ngl_vec2_len
 #endif /* ngl_vec2_mag */
-
 
 
 #endif /* NGL_NO_MATH */
@@ -1121,7 +1138,7 @@ ngl_float ngl_randf(void) {
 }
 
 
-#endif NGL_NO_RAND
+#endif /* NGL_NO_RAND */
 
 
 
@@ -1732,6 +1749,7 @@ typedef ngl_font_t             font_t;
 
 #define vec2_t         ngl_vec2_t
 #define vec2           ngl_vec2
+#define vec2f          ngl_vec2f
 
 #define vec2_add       ngl_vec2_add
 #define vec2_sub       ngl_vec2_sub
