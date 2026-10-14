@@ -41,6 +41,12 @@
  *   Prepend "ngl_" to all functions, this is a Workaround as we don't 
  *   have Namespaces in C
  *
+ *  #define NGL_NO_RAND:
+ *   Disable the random Module.
+ *
+ *  #define NGL_NO_TIME:
+ *   Disable the time Module.
+ *
  *  #define NGL_NO_FONTS:
  *   Disable the font Module.
  *
@@ -58,7 +64,7 @@
  *   Default: static inline.
  *
  *  #define NGL_USE_F64:
- *   Make the Math module use 64 bit floats instead of 32 bit.
+ *   Make ngl.h use 64 bit floats instead of 32 bit.
  *
  *  #define NGL_DOUBLE_CHARS:
  *   Draw each character twice when printing the screen, this makes each
@@ -68,10 +74,10 @@
  *   Disable double buffered Screen printing.
  *
  *  #define NGL_INPUT_MAX_DEVICES:
- *   Maximum amount of devices to poll from.
+ *   Maximum amount of devices to poll input from.
  *   Default: 32.
  *
- * Examples: checkout README.md and example directory.
+ * Examples: checkout the example directory.
  */
 
 #ifndef _NGL_H
@@ -81,14 +87,17 @@
 # ifdef NGL_SERIOUS_ERRORS
 #  error "ngl input Module currently only works on linux."
 # else
-#  error "ngl input Module currently only works on linux :(."
+#  error "ngl input Module currently only works on linux :("
 # endif /* NGL_SERIOUS_ERRORS */
 #endif /* __linux__ */
 
-#undef _GNU_SOURCE
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#undef _POSIX_C_SOURCE
+#endif /* _GNU_SOURCE */
+
+#if _POSIX_C_SOURCE < 200809L
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -132,12 +141,12 @@
 
 /* ngl.h Version. */
 #define NGL_VERSION_MAJOR 1
-#define NGL_VERSION_MINOR 1
+#define NGL_VERSION_MINOR 2
 #define NGL_VERSION_PATCH 0
 
-#define NGL_IS_RELEASE 1
+#define NGL_IS_RELEASE 2
 
-#define NGL_VERSION_STR "1.1.0-release"
+#define NGL_VERSION_STR "1.2.0-dev"
 
 /* More helpful types */
 typedef int8_t    i8;
@@ -310,8 +319,10 @@ typedef struct {
 typedef struct {
     ngl_screen_t    screen;
 
+#ifndef NGL_NO_TIME
     u64             current_ms;
     ngl_float       dt;
+#endif /* NGL_NO_TIME */
 
 #ifndef NGL_NO_INPUT
     ngl_input_ctx_t input;
@@ -383,13 +394,6 @@ ngl_t _ngl_new(ngl_api_config_t config);
 #define ngl_new(...) _ngl_new((ngl_api_config_t){__VA_ARGS__})
 void ngl_destroy(ngl_t *api);
 
-void       ngl_delay(u32 ms);
-u64        ngl_get_ms(void);
-ngl_float  ngl_get_dt(ngl_t *api);
-
-i32        ngl_randr(i32 min, i32 max);
-ngl_float  ngl_randf(void);
-
 void ngl_clear_screen(void);
 
 ngl_error_t  ngl_get_term_size(u32 *w, u32 *h);
@@ -414,6 +418,42 @@ ngl_error_t  ngl_draw_rect(ngl_t *api, u32 x, u32 y, u32 w, u32 h, char c, ngl_c
 ngl_error_t  ngl_draw_sprite(ngl_t *api, u32 x, u32 y, u32 w, u32 h, const char *sprite, ngl_color_t color);
 
 ngl_error_t  ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 end_y, char c, ngl_color_t color);
+
+
+
+#ifndef NGL_NO_TIME
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                             ngl time Module.                            |
+ * +-------------------------------------------------------------------------+
+ */
+
+
+void       ngl_delay(u32 ms);
+u64        ngl_get_ms(void);
+ngl_float  ngl_get_dt(ngl_t *api);
+
+
+#endif /* NGL_NO_TIME */
+
+
+
+
+#ifndef NGL_NO_RAND
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                           ngl random Module.                            |
+ * +-------------------------------------------------------------------------+
+ */
+
+
+i32        ngl_randr(i32 min, i32 max);
+ngl_float  ngl_randf(void);
+
+
+#endif /* NGL_NO_RAND */
 
 
 
@@ -460,7 +500,7 @@ ngl_error_t     ngl_get_keyboard_state(ngl_t *api);
 #endif /* is_key_down */
 
 
-#endif /* NGL_NO_pressed */
+#endif /* NGL_NO_INPUT */
 
 
 
@@ -517,9 +557,16 @@ typedef struct {
     ngl_float x, y;
 } ngl_vec2_t;
 
-/* Constructor */
+/* Constructors */
+
+/* Vector from two numbers. */
 #ifndef ngl_vec2
 #define ngl_vec2(x, y) ((ngl_vec2_t){(ngl_float)(x), (ngl_float)(y)})
+#endif /* ngl_vec2 */
+
+/* Vector from one number. */
+#ifndef ngl_vec2f
+#define ngl_vec2f(n) ((ngl_vec2_t){(ngl_float)(n), (ngl_float)(n)})
 #endif /* ngl_vec2 */
 
 #ifndef PI
@@ -561,6 +608,8 @@ NGL_MATHDEF ngl_vec2_t ngl_vec2_rot(ngl_vec2_t vec, ngl_float angle);
 
 #ifdef NGL_IMPLEMENTATION
 
+
+
 /*
  * +-------------------------------------------------------------------------+
  * |                            ngl main Implementation.                     |
@@ -579,8 +628,10 @@ ngl_t _ngl_new(ngl_api_config_t config) {
         screen_h = config.screen.h;
     }
 
+#ifndef NGL_NO_TIME
     api.dt = 0.0;
     api.current_ms = ngl_get_ms();
+#endif /* NGL_NO_TIME */
 
     api.screen = ngl_screen_new(screen_w, screen_h);
 
@@ -728,39 +779,6 @@ const char *ngl_error_to_string(ngl_error_t error) {
     }
 }
 #endif /* NGL_SERIOUS_ERRORS */
-
-void ngl_delay(u32 ms) {
-    struct timeval tv;
-    tv.tv_sec = ms / 1000;
-    tv.tv_usec = (ms % 1000) * 1000L;
-    select(0, NULL, NULL, NULL, &tv);
-}
-
-u64 ngl_get_ms(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-}
-
-ngl_float ngl_get_dt(ngl_t *api) {
-    u64 oldtime = api->current_ms;
-    api->current_ms = ngl_get_ms();
-    api->dt = ((ngl_float)api->current_ms - (ngl_float)oldtime) / 1000.0;
-    return api->dt;
-}
-
-i32 ngl_randr(i32 min, i32 max) {
-    if (min > max) {
-        return 0;
-    }
-
-    return (u32)(min + rand() % (max - min + 1));
-
-}
-
-ngl_float ngl_randf(void) {
-    return (ngl_float)rand() / (ngl_float)RAND_MAX;
-}
 
 /* Function originaly written by Glenn Chappell & Ian Chai 14 Apr 1993 */
 ngl_error_t ngl_get_term_size(u32 *w, u32 *h) {
@@ -1044,6 +1062,67 @@ ngl_error_t ngl_draw_line(ngl_t *api, u32 start_x, u32 start_y, u32 end_x, u32 e
 
     return ERR_SUCCESS;
 }
+
+
+
+
+#ifndef NGL_NO_TIME
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                            ngl input Implementation.                    |
+ * +-------------------------------------------------------------------------+
+ */
+
+void ngl_delay(u32 ms) {
+    struct timeval tv;
+    tv.tv_sec = ms / 1000;
+    tv.tv_usec = (ms % 1000) * 1000L;
+    select(0, NULL, NULL, NULL, &tv);
+}
+
+u64 ngl_get_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (u64)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+ngl_float ngl_get_dt(ngl_t *api) {
+    u64 oldtime = api->current_ms;
+    api->current_ms = ngl_get_ms();
+    api->dt = ((ngl_float)api->current_ms - (ngl_float)oldtime) / 1000.0;
+    return api->dt;
+}
+
+
+#endif /* NGL_NO_TIME */
+
+
+
+
+#ifndef NGL_NO_RAND
+
+/*
+ * +-------------------------------------------------------------------------+
+ * |                           ngl random Implementation.                    |
+ * +-------------------------------------------------------------------------+
+ */
+
+i32 ngl_randr(i32 min, i32 max) {
+    if (min > max) {
+        return 0;
+    }
+
+    return (min + rand() % (max - min + 1));
+}
+
+ngl_float ngl_randf(void) {
+    return (ngl_float)rand() / (ngl_float)RAND_MAX;
+}
+
+
+#endif NGL_NO_RAND
+
 
 
 
@@ -1582,13 +1661,6 @@ typedef ngl_color_t            color_t;
 #define error_to_string        ngl_error_to_string
 #define idx                    ngl_idx
 
-#define delay                  ngl_delay
-#define get_ms                 ngl_get_ms
-#define get_dt                 ngl_get_dt
-
-#define randr                  ngl_randr
-#define randf                  ngl_randf
-
 #define clear_screen           ngl_clear_screen
 
 #define get_term_size          ngl_get_term_size
@@ -1609,6 +1681,21 @@ typedef ngl_color_t            color_t;
 
 #define draw_sprite            ngl_draw_sprite
 #define draw_screen_borders    ngl_draw_screen_borders
+
+#ifndef NGL_NO_TIME
+
+#define delay                  ngl_delay
+#define get_ms                 ngl_get_ms
+#define get_dt                 ngl_get_dt
+
+#endif /* NGL_NO_TIME */
+
+#ifndef NGL_NO_RAND
+
+#define randr                  ngl_randr
+#define randf                  ngl_randf
+
+#endif /* NGL_NO_RAND */
 
 #ifndef NGL_NO_INPUT
 
